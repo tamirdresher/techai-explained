@@ -1,0 +1,4 @@
+{
+  "layout": "article.njk",
+  "permalink": "/courses/kubernetes-for-app-devs/{{ page.fileSlug }}/"
+}
