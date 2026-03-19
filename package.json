@@ -21,5 +21,8 @@
   "homepage": "https://github.com/tamirdresher/techai-explained#readme",
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0"
+  },
+  "dependencies": {
+    "@11ty/eleventy-plugin-rss": "^2.0.4"
   }
 }

@@ -19,6 +19,9 @@ A tech education platform delivering in-depth tutorials, visual guides, and vide
 | [Aspire for .NET Developers: The Missing Dashboard](https://tamirdresher.github.io/techai-explained/articles/aspire-dotnet-missing-dashboard/) | .NET | 12 min |
 | [WebSockets vs SSE vs gRPC Streaming in 2026](https://tamirdresher.github.io/techai-explained/articles/websockets-vs-sse-vs-grpc/) | Architecture | 11 min |
 | [From Monolith to Microservices: A Practical Migration Guide](https://tamirdresher.github.io/techai-explained/articles/monolith-to-microservices-guide/) | Architecture | 14 min |
+| [Event-Driven Architecture with Azure Service Bus and .NET](https://tamirdresher.github.io/techai-explained/articles/event-driven-azure-service-bus/) | Azure | 13 min |
+| [GitHub Actions Advanced: Matrix Builds, Reusable Workflows, and OIDC](https://tamirdresher.github.io/techai-explained/articles/github-actions-advanced/) | DevOps | 12 min |
+| [AI Code Generation: When to Trust It and When to Rewrite](https://tamirdresher.github.io/techai-explained/articles/ai-code-generation-trust-framework/) | AI | 10 min |
 
 ## 🎥 Video Script Outlines
 
@@ -29,6 +32,8 @@ A tech education platform delivering in-depth tutorials, visual guides, and vide
 | The Developer Productivity Stack for 2026 | 11 min |
 | Docker vs Podman: The Real Differences | 9 min |
 | How AI Changed Code Review Forever | 10 min |
+| Microservices Are Dead? What Actually Replaced Them | 11 min |
+| The 5 Tools Every Platform Engineer Uses Daily | 10 min |
 
 ## 🛠️ Tech Stack
 
