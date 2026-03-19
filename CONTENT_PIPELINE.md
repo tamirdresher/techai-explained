@@ -41,10 +41,10 @@ Track upcoming content and production status.
 ### Enable GitHub Pages
 - **Status:** Action Required
 - **Steps:**
-  1. Go to [repo Settings > Pages](https://github.com/tamirdresher/techai-explained/settings/pages)
+  1. Go to [repo Settings > Pages](https://github.com/techai-explained/techai-explained/settings/pages)
   2. Under "Source", select **GitHub Actions**
   3. Re-run the deploy workflow
-  4. Site will be live at `https://tamirdresher.github.io/techai-explained`
+  4. Site will be live at `https://techai-explained.netlify.app`
 
 ### Add RSS Feed
 - **Status:** Planned

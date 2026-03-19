@@ -79,7 +79,7 @@ For companies that want to support developer education and get visibility.
 ### GitHub Sponsors (Preferred)
 The easiest way to support us with monthly contributions:
 
-👉 [**Sponsor on GitHub**](https://github.com/sponsors/tamirdresher)
+👉 [**Sponsor on GitHub**](#)
 
 ### One-Time Contributions
 Want to make a one-time donation instead?
@@ -97,7 +97,7 @@ Want to make a one-time donation instead?
 
 ## Questions?
 
-Open an issue on [GitHub](https://github.com/tamirdresher/techai-explained) or reach out via the links on our [About page](/about/).
+Open an issue on [GitHub](https://github.com/techai-explained/techai-explained) or reach out via the links on our [About page](/about/).
 
 ---
 

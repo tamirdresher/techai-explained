@@ -16,9 +16,9 @@
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/tamirdresher/techai-explained/issues"
+    "url": "https://github.com/techai-explained/techai-explained/issues"
   },
-  "homepage": "https://github.com/tamirdresher/techai-explained#readme",
+  "homepage": "https://github.com/techai-explained/techai-explained#readme",
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0"
   },
