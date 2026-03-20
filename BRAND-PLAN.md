@@ -97,3 +97,32 @@ Deliver daily, actionable tech insights to developers and tech enthusiasts — i
 - Affiliate conversions
 - Newsletter subscribers
 - Social media followers
+
+## Session History
+
+### March 19–20, 2026 — Major Build Session
+- **Agents used:** 87 AI agents (squad pattern)
+- **Files created/modified:** 250+
+- **Videos generated:** 8 MP4s (4 EN + 4 HE daily briefs)
+
+**What was built:**
+- Full video pipeline: `generate_video.py` with 8 slide templates, TTS via edge-tts
+- Daily brief system: news fetching → script generation → video rendering
+- Hebrew content pipeline: `topics_he.json`, Hebrew TTS (he-IL-AvriNeural)
+- 15 tutorial articles covering .NET, AI, K8s, cloud, DevOps
+- 9 video scripts + 14 slide-formatted scripts
+- 5-lesson Kubernetes course
+- Eleventy static site (~36 pages)
+- GitHub Actions: daily-briefs.yml (6 AM UTC cron), content-calendar.yml, deploy.yml
+- Gumroad products: AI Dev Course ($19.99), K8s Course ($14.99), Game Bundle ($4.99)
+- Monetization setup: AdSense placeholders, affiliate configs, FUNDING.yml
+- Hebrew interview series: 48 files (C#, Algorithms, AI/ML, System Design)
+- Brand detachment: removed all personal name references
+
+**Key decisions:**
+- Independent brand identity (no personal name association)
+- Dual-language strategy (English + Hebrew)
+- Automated daily content via GitHub Actions
+- Gumroad as primary digital product platform
+- Edge-tts for zero-cost TTS (no API keys needed)
+- Eleventy for static site (lightweight, fast builds)
