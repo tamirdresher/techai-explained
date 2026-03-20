@@ -4,7 +4,7 @@
 
 A tech education platform delivering in-depth tutorials, visual guides, and video content on AI, DevOps, reactive programming, and modern software engineering.
 
-🌐 **Live Site:** [techai-explained.netlify.app](https://techai-explained.netlify.app)
+🌐 **Live Site:** [techai-explained.netlify.app](https://techai-explained.github.io/techai-explained)
 
 ---
 
@@ -12,16 +12,16 @@ A tech education platform delivering in-depth tutorials, visual guides, and vide
 
 | Article | Topic | Read Time |
 |---------|-------|-----------|
-| [Understanding AI Agents: Architecture Patterns That Work](https://techai-explained.netlify.app/articles/ai-agents-architecture-patterns/) | AI | 12 min |
-| [Building Your First Copilot Extension in 30 Minutes](https://techai-explained.netlify.app/articles/building-copilot-extension/) | Developer Tools | 10 min |
-| [Kubernetes Autoscaling: A Visual Guide](https://techai-explained.netlify.app/articles/kubernetes-autoscaling-visual-guide/) | DevOps | 13 min |
-| [Reactive Programming in 2026: What Changed](https://techai-explained.netlify.app/articles/reactive-programming-2026/) | Programming | 11 min |
-| [Aspire for .NET Developers: The Missing Dashboard](https://techai-explained.netlify.app/articles/aspire-dotnet-missing-dashboard/) | .NET | 12 min |
-| [WebSockets vs SSE vs gRPC Streaming in 2026](https://techai-explained.netlify.app/articles/websockets-vs-sse-vs-grpc/) | Architecture | 11 min |
-| [From Monolith to Microservices: A Practical Migration Guide](https://techai-explained.netlify.app/articles/monolith-to-microservices-guide/) | Architecture | 14 min |
-| [Event-Driven Architecture with Azure Service Bus and .NET](https://techai-explained.netlify.app/articles/event-driven-azure-service-bus/) | Azure | 13 min |
-| [GitHub Actions Advanced: Matrix Builds, Reusable Workflows, and OIDC](https://techai-explained.netlify.app/articles/github-actions-advanced/) | DevOps | 12 min |
-| [AI Code Generation: When to Trust It and When to Rewrite](https://techai-explained.netlify.app/articles/ai-code-generation-trust-framework/) | AI | 10 min |
+| [Understanding AI Agents: Architecture Patterns That Work](https://techai-explained.github.io/techai-explained/articles/ai-agents-architecture-patterns/) | AI | 12 min |
+| [Building Your First Copilot Extension in 30 Minutes](https://techai-explained.github.io/techai-explained/articles/building-copilot-extension/) | Developer Tools | 10 min |
+| [Kubernetes Autoscaling: A Visual Guide](https://techai-explained.github.io/techai-explained/articles/kubernetes-autoscaling-visual-guide/) | DevOps | 13 min |
+| [Reactive Programming in 2026: What Changed](https://techai-explained.github.io/techai-explained/articles/reactive-programming-2026/) | Programming | 11 min |
+| [Aspire for .NET Developers: The Missing Dashboard](https://techai-explained.github.io/techai-explained/articles/aspire-dotnet-missing-dashboard/) | .NET | 12 min |
+| [WebSockets vs SSE vs gRPC Streaming in 2026](https://techai-explained.github.io/techai-explained/articles/websockets-vs-sse-vs-grpc/) | Architecture | 11 min |
+| [From Monolith to Microservices: A Practical Migration Guide](https://techai-explained.github.io/techai-explained/articles/monolith-to-microservices-guide/) | Architecture | 14 min |
+| [Event-Driven Architecture with Azure Service Bus and .NET](https://techai-explained.github.io/techai-explained/articles/event-driven-azure-service-bus/) | Azure | 13 min |
+| [GitHub Actions Advanced: Matrix Builds, Reusable Workflows, and OIDC](https://techai-explained.github.io/techai-explained/articles/github-actions-advanced/) | DevOps | 12 min |
+| [AI Code Generation: When to Trust It and When to Rewrite](https://techai-explained.github.io/techai-explained/articles/ai-code-generation-trust-framework/) | AI | 10 min |
 
 ## 🎥 Video Script Outlines
 
