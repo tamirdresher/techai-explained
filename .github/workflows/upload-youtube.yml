@@ -1,0 +1,79 @@
+name: Upload Daily Briefs to YouTube
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to upload (YYYY-MM-DD, default: today)'
+        required: false
+      topic:
+        description: 'Specific topic (leave empty for all)'
+        required: false
+      language:
+        description: 'Language: en, he, or both'
+        required: false
+        default: 'both'
+  # Trigger automatically after daily brief generation succeeds
+  workflow_run:
+    workflows: ["Daily Tech Briefs"]
+    types: [completed]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
+
+      - name: Set upload date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Download video artifacts (workflow_run trigger)
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          name: daily-briefs-${{ steps.date.outputs.date }}
+          path: pipeline/daily-briefs/output/${{ steps.date.outputs.date }}/
+        continue-on-error: true
+
+      - name: Download video artifacts (manual trigger)
+        if: github.event_name == 'workflow_dispatch' && inputs.date != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: daily-briefs-${{ inputs.date || steps.date.outputs.date }}
+          path: pipeline/daily-briefs/output/${{ inputs.date || steps.date.outputs.date }}/
+        continue-on-error: true
+
+      - name: Upload to YouTube
+        env:
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YT_PLAYLIST_DOTNET: ${{ secrets.YT_PLAYLIST_DOTNET }}
+          YT_PLAYLIST_AI: ${{ secrets.YT_PLAYLIST_AI }}
+          YT_PLAYLIST_CLOUD: ${{ secrets.YT_PLAYLIST_CLOUD }}
+          YT_PLAYLIST_DEV: ${{ secrets.YT_PLAYLIST_DEV }}
+          YT_PLAYLIST_SECURITY: ${{ secrets.YT_PLAYLIST_SECURITY }}
+          YT_PLAYLIST_GAMEDEV: ${{ secrets.YT_PLAYLIST_GAMEDEV }}
+        run: |
+          DATE="${{ inputs.date || steps.date.outputs.date }}"
+          TOPIC_ARG=""
+          if [ -n "${{ inputs.topic }}" ]; then
+            TOPIC_ARG="--topic ${{ inputs.topic }}"
+          fi
+          python pipeline/daily-briefs/upload_to_youtube.py \
+            --date "$DATE" \
+            --language "${{ inputs.language || 'both' }}" \
+            $TOPIC_ARG

@@ -22,6 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set date
+        id: set-date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -71,19 +75,10 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: daily-briefs-${{ github.run_number }}
+          # Named by date so the upload-youtube workflow can locate them
+          name: daily-briefs-${{ steps.set-date.outputs.date }}
           path: pipeline/daily-briefs/output/
           retention-days: 30
-
-      - name: Upload to YouTube (if configured)
-        if: env.YOUTUBE_API_KEY != ''
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-        run: |
-          echo "YouTube upload would happen here once API keys are configured"
-          # python pipeline/upload_to_youtube.py
 
   weekly-summary:
     runs-on: ubuntu-latest

@@ -101,6 +101,15 @@ function Generate-DailyBriefs {
     }
 
     Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - All briefs generated (English + Hebrew)!" -ForegroundColor Green
+
+    # Upload to YouTube if credentials are available
+    if ($env:YOUTUBE_REFRESH_TOKEN) {
+        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Uploading briefs to YouTube..." -ForegroundColor Cyan
+        python "$pipelineDir\upload_to_youtube.py" --date $Date --language both
+        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - YouTube upload complete." -ForegroundColor Green
+    } else {
+        Write-Host "  [Skip] YOUTUBE_REFRESH_TOKEN not set — skipping YouTube upload." -ForegroundColor DarkGray
+    }
 }
 
 function Start-Scheduler {
