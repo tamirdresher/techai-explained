@@ -14,6 +14,56 @@ $dailyTopics = @("dotnet", "ai", "cloud", "dev")
 # Topics to generate weekly (on Sundays)
 $weeklyTopics = @("security", "gamedev")
 
+function New-FailureIssue {
+    param(
+        [string]$Date,
+        [string]$Topic,
+        [string]$Language,
+        [string]$Problem
+    )
+
+    $searchTitle = "TechAI Failure $Topic $Date"
+    $existing = gh issue list --repo tamirdresher/techai-explained --search $searchTitle 2>$null
+
+    if ($existing) {
+        Write-Host "  [Skip] GitHub issue already exists for $Topic ($Language) on $Date" -ForegroundColor DarkGray
+        return
+    }
+
+    $title = "[TechAI Failure] $Topic $Language brief failed on $Date"
+    $body = "## Daily Brief Generation Failed`n`n- **Topic:** $Topic`n- **Language:** $Language`n- **Date:** $Date`n- **Problem:** $Problem`n`nCheck logs in: pipeline/daily-briefs/output/$Date/`n`n**Auto-created by scheduler.**"
+
+    Write-Host "  [Issue] Creating GitHub issue: $title" -ForegroundColor Red
+    gh issue create --repo tamirdresher/techai-explained `
+        --title $title `
+        --body $body `
+        --label "bug"
+}
+
+function Assert-BriefOutputs {
+    param(
+        [string]$Date,
+        [string]$Topic,
+        [string]$PipelineDir
+    )
+
+    $minSizeBytes = 50 * 1024  # 50 KB
+
+    $enFile = "$PipelineDir\output\$Date\$Topic-brief.mp4"
+    if (-not (Test-Path $enFile)) {
+        New-FailureIssue -Date $Date -Topic $Topic -Language "English" -Problem "Output file missing: $enFile"
+    } elseif ((Get-Item $enFile).Length -lt $minSizeBytes) {
+        New-FailureIssue -Date $Date -Topic $Topic -Language "English" -Problem "Output file too small ($([Math]::Round((Get-Item $enFile).Length/1KB, 1)) KB < 50 KB): $enFile"
+    }
+
+    $heFile = "$PipelineDir\output\$Date\$Topic-he-brief.mp4"
+    if (-not (Test-Path $heFile)) {
+        New-FailureIssue -Date $Date -Topic $Topic -Language "Hebrew" -Problem "Output file missing: $heFile"
+    } elseif ((Get-Item $heFile).Length -lt $minSizeBytes) {
+        New-FailureIssue -Date $Date -Topic $Topic -Language "Hebrew" -Problem "Output file too small ($([Math]::Round((Get-Item $heFile).Length/1KB, 1)) KB < 50 KB): $heFile"
+    }
+}
+
 function Generate-DailyBriefs {
     param([string]$Date)
 
@@ -31,6 +81,8 @@ function Generate-DailyBriefs {
             Write-Host "  Generating Hebrew video for: $topic" -ForegroundColor Blue
             python "$pipelineDir\generate_hebrew_brief.py" $briefJson --language he
         }
+
+        Assert-BriefOutputs -Date $Date -Topic $topic -PipelineDir $pipelineDir
     }
 
     # Check if Sunday for weekly topics
@@ -43,6 +95,8 @@ function Generate-DailyBriefs {
                 python "$pipelineDir\generate_brief_video.py" $briefJson --language en
                 python "$pipelineDir\generate_hebrew_brief.py" $briefJson --language he
             }
+
+            Assert-BriefOutputs -Date $Date -Topic $topic -PipelineDir $pipelineDir
         }
     }
 
