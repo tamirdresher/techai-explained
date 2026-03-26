@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Engineering for Backend Developers — TechAI Explained</title>
+  <meta name="description" content="A practical guide to prompt engineering for developers who work with LLM APIs — system prompts, few-shot patterns, structured outputs, and the techniques that produce reliable results in production code.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">AI</span>
+      <time>March 5, 2026</time>
+      <span class="read-time">11 min read</span>
+    </div>
+    <h1>Prompt Engineering for Backend Developers</h1>
+    <p class="subtitle">A practical guide to prompt engineering for developers who work with LLM APIs — system prompts, few-shot patterns, structured outputs, and the techniques that produce reliable results in production code.</p>
+  </header>
+  <div class="article-body">
+    <p>Prompt engineering for backend developers is different from the creative prompting you see on social media. You're not trying to write poems — you're trying to get structured, reliable, deterministic outputs from an API that's fundamentally probabilistic. This guide covers the patterns that work in production code.</p>
+<h2>The Three Layers of a Prompt</h2>
+<p>Every production prompt has three layers: the system prompt, the context, and the user instruction.</p>
+<div class="diagram-box">
+┌─────────────────────────────────────────────────┐
+│  SYSTEM PROMPT (sets behavior and constraints)  │
+│  "You are a JSON API that classifies support    │
+│   tickets. Always respond with valid JSON."     │
+├─────────────────────────────────────────────────┤
+│  CONTEXT (domain data, examples, retrieved docs)│
+│  "Categories: billing, technical, account,      │
+│   feature-request. Priority: low, medium, high" │
+│  "Example: 'Can't login' → technical, high"     │
+├─────────────────────────────────────────────────┤
+│  USER INSTRUCTION (the actual task)             │
+│  "Classify this ticket: 'My invoice shows       │
+│   the wrong amount for March'"                  │
+└─────────────────────────────────────────────────┘
+</div>
+<pre><code class="language-python">response = client.chat.completions.create(
+    model=&quot;gpt-4o&quot;,
+    messages=[
+        {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: system_prompt},
+        {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: f&quot;{context}\n\n{instruction}&quot;},
+    ],
+    temperature=0,          # Deterministic output
+    response_format={&quot;type&quot;: &quot;json_object&quot;},
+)
+</code></pre>
+<h2>Pattern 1: System Prompt as a Contract</h2>
+<p>The system prompt is your API contract. It defines what the model does and — critically — what it doesn't do.</p>
+<pre><code class="language-python">SYSTEM_PROMPT = &quot;&quot;&quot;You are a ticket classification API.
+
+ROLE: Classify customer support tickets into categories and priorities.
+
+OUTPUT FORMAT: Always respond with valid JSON matching this schema:
+{
+  &quot;category&quot;: &quot;billing&quot; | &quot;technical&quot; | &quot;account&quot; | &quot;feature-request&quot;,
+  &quot;priority&quot;: &quot;low&quot; | &quot;medium&quot; | &quot;high&quot;,
+  &quot;confidence&quot;: 0.0 to 1.0,
+  &quot;reasoning&quot;: &quot;one sentence explaining the classification&quot;
+}
+
+RULES:
+- If the ticket mentions money, billing, charges, or invoices → category: billing
+- If the ticket mentions login, errors, crashes, or bugs → category: technical
+- If the ticket is ambiguous, choose the most likely category and set confidence &lt; 0.7
+- Never invent categories outside the four listed above
+- Never include information not present in the ticket
+&quot;&quot;&quot;
+</code></pre>
+<p><strong>Key principles:</strong></p>
+<ul>
+<li><strong>Be explicit about output format</strong> — JSON schema, field names, valid values</li>
+<li><strong>Define edge cases</strong> — what happens with ambiguous input?</li>
+<li><strong>Set boundaries</strong> — &quot;never invent categories,&quot; &quot;never include information not present&quot;</li>
+<li><strong>Keep it focused</strong> — one task per system prompt</li>
+</ul>
+<h2>Pattern 2: Few-Shot Examples</h2>
+<p>Show the model what correct output looks like. This is the single most effective technique for improving reliability.</p>
+<pre><code class="language-python">FEW_SHOT_EXAMPLES = &quot;&quot;&quot;
+EXAMPLE 1:
+Ticket: &quot;I was charged twice for my subscription this month&quot;
+Output: {&quot;category&quot;: &quot;billing&quot;, &quot;priority&quot;: &quot;high&quot;, &quot;confidence&quot;: 0.95, &quot;reasoning&quot;: &quot;Double charge is a billing issue requiring urgent resolution&quot;}
+
+EXAMPLE 2:
+Ticket: &quot;The dashboard loads slowly when I have more than 100 items&quot;
+Output: {&quot;category&quot;: &quot;technical&quot;, &quot;priority&quot;: &quot;medium&quot;, &quot;confidence&quot;: 0.9, &quot;reasoning&quot;: &quot;Performance issue in the dashboard with large datasets&quot;}
+
+EXAMPLE 3:
+Ticket: &quot;Can you add dark mode to the mobile app?&quot;
+Output: {&quot;category&quot;: &quot;feature-request&quot;, &quot;priority&quot;: &quot;low&quot;, &quot;confidence&quot;: 0.95, &quot;reasoning&quot;: &quot;User requesting a new UI feature for the mobile application&quot;}
+
+EXAMPLE 4:
+Ticket: &quot;My account settings page doesn't show my updated email&quot;
+Output: {&quot;category&quot;: &quot;account&quot;, &quot;priority&quot;: &quot;medium&quot;, &quot;confidence&quot;: 0.8, &quot;reasoning&quot;: &quot;Account data not reflecting recent changes, could also be technical&quot;}
+&quot;&quot;&quot;
+</code></pre>
+<p><strong>Guidelines for examples:</strong></p>
+<ul>
+<li><strong>3-5 examples</strong> is the sweet spot — fewer is insufficient, more wastes tokens</li>
+<li><strong>Cover edge cases</strong> — include an ambiguous example with lower confidence</li>
+<li><strong>Show the exact output format</strong> — the model mirrors the pattern precisely</li>
+<li><strong>Vary the inputs</strong> — different lengths, different vocabularies, different categories</li>
+</ul>
+<h2>Pattern 3: Structured Output Enforcement</h2>
+<p>Don't hope the model returns valid JSON. <strong>Force it.</strong></p>
+<pre><code class="language-python">from pydantic import BaseModel, Field
+from enum import Enum
+
+class Category(str, Enum):
+    BILLING = &quot;billing&quot;
+    TECHNICAL = &quot;technical&quot;
+    ACCOUNT = &quot;account&quot;
+    FEATURE_REQUEST = &quot;feature-request&quot;
+
+class Priority(str, Enum):
+    LOW = &quot;low&quot;
+    MEDIUM = &quot;medium&quot;
+    HIGH = &quot;high&quot;
+
+class TicketClassification(BaseModel):
+    category: Category
+    priority: Priority
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = Field(max_length=200)
+
+# OpenAI structured outputs
+response = client.beta.chat.completions.parse(
+    model=&quot;gpt-4o&quot;,
+    messages=[
+        {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: SYSTEM_PROMPT},
+        {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: ticket_text},
+    ],
+    response_format=TicketClassification,
+)
+
+result = response.choices[0].message.parsed
+# result.category is guaranteed to be a valid Category enum
+</code></pre>
+<p>With structured outputs, invalid JSON is <strong>impossible</strong>. The model is constrained to only produce valid tokens matching your schema.</p>
+<h2>Pattern 4: Chain of Thought for Complex Reasoning</h2>
+<p>When the task requires reasoning, ask the model to think step-by-step before giving the final answer.</p>
+<pre><code class="language-python">SYSTEM_PROMPT = &quot;&quot;&quot;You are a code review assistant that identifies security vulnerabilities.
+
+For each code snippet, follow this process:
+1. IDENTIFY what the code does (2-3 sentences)
+2. LIST potential security concerns (bullet points)
+3. CLASSIFY each concern as: critical, warning, or info
+4. PROVIDE a fixed version of the code if critical issues exist
+
+Format your response as JSON:
+{
+  &quot;summary&quot;: &quot;what the code does&quot;,
+  &quot;concerns&quot;: [
+    {&quot;issue&quot;: &quot;description&quot;, &quot;severity&quot;: &quot;critical|warning|info&quot;, &quot;line&quot;: 0}
+  ],
+  &quot;fixed_code&quot;: &quot;corrected code or null if no critical issues&quot;,
+  &quot;overall_risk&quot;: &quot;low|medium|high&quot;
+}
+&quot;&quot;&quot;
+</code></pre>
+<p>The explicit step-by-step process produces more accurate analysis than &quot;find security vulnerabilities.&quot;</p>
+<h2>Pattern 5: Prompt Templates with Variables</h2>
+<p>Build prompts programmatically. Never concatenate strings manually.</p>
+<pre><code class="language-python">from string import Template
+
+REVIEW_TEMPLATE = Template(&quot;&quot;&quot;
+Review the following $language code for $review_type issues.
+
+File: $filename
+Context: This file is part of a $project_type that handles $domain.
+
+</code></pre>
+<p>$code</p>
+<pre><code>
+Focus on:
+$focus_areas
+
+Respond with JSON matching the review schema.
+&quot;&quot;&quot;)
+
+prompt = REVIEW_TEMPLATE.substitute(
+    language=&quot;Python&quot;,
+    review_type=&quot;security&quot;,
+    filename=&quot;auth/login.py&quot;,
+    project_type=&quot;web API&quot;,
+    domain=&quot;user authentication&quot;,
+    code=file_content,
+    focus_areas=&quot;- SQL injection\n- Authentication bypass\n- Credential handling&quot;,
+)
+</code></pre>
+<h2>Pattern 6: Retry with Reformulation</h2>
+<p>When the model fails, don't just retry — reformulate.</p>
+<pre><code class="language-python">async def classify_with_retry(ticket: str, max_retries: int = 3):
+    for attempt in range(max_retries):
+        try:
+            result = await classify_ticket(ticket)
+            parsed = TicketClassification.model_validate_json(result)
+            return parsed
+        except ValidationError as e:
+            if attempt == max_retries - 1:
+                raise
+
+            # Reformulate with the error
+            result = await client.chat.completions.create(
+                messages=[
+                    {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: SYSTEM_PROMPT},
+                    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: ticket},
+                    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: result},
+                    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;:
+                        f&quot;Your response had validation errors: {e}. &quot;
+                        f&quot;Please fix and respond with valid JSON.&quot;},
+                ],
+            )
+</code></pre>
+<h2>Temperature and Sampling</h2>
+<table>
+<thead>
+<tr>
+<th>Temperature</th>
+<th>Behavior</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Deterministic (same input → same output)</td>
+<td>Classification, extraction, structured data</td>
+</tr>
+<tr>
+<td>0.3-0.5</td>
+<td>Slight variation, mostly consistent</td>
+<td>Summarization, code review</td>
+</tr>
+<tr>
+<td>0.7-1.0</td>
+<td>Creative, varied responses</td>
+<td>Content generation, brainstorming</td>
+</tr>
+</tbody>
+</table>
+<p><strong>For backend APIs, use temperature 0.</strong> You want the same ticket to get the same classification every time.</p>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Vague system prompts</strong> — &quot;You are a helpful assistant&quot; tells the model nothing useful</li>
+<li><strong>No output format specification</strong> — hoping for JSON without specifying the schema</li>
+<li><strong>Temperature too high</strong> — creative randomness is the enemy of reliable APIs</li>
+<li><strong>No input validation</strong> — sending empty strings or 100K-token documents</li>
+<li><strong>Not measuring quality</strong> — prompt engineering without evaluation is guessing</li>
+<li><strong>Prompt in production without tests</strong> — create a test suite of 50+ input/expected-output pairs</li>
+</ol>
+<h2>Evaluation: The Missing Step</h2>
+<pre><code class="language-python">test_cases = [
+    {
+        &quot;input&quot;: &quot;I was charged $99 instead of $49&quot;,
+        &quot;expected_category&quot;: &quot;billing&quot;,
+        &quot;expected_priority&quot;: &quot;high&quot;,
+    },
+    {
+        &quot;input&quot;: &quot;App crashes when uploading files over 10MB&quot;,
+        &quot;expected_category&quot;: &quot;technical&quot;,
+        &quot;expected_priority&quot;: &quot;high&quot;,
+    },
+]
+
+results = []
+for case in test_cases:
+    output = classify_ticket(case[&quot;input&quot;])
+    results.append({
+        &quot;correct_category&quot;: output.category == case[&quot;expected_category&quot;],
+        &quot;correct_priority&quot;: output.priority == case[&quot;expected_priority&quot;],
+    })
+
+accuracy = sum(r[&quot;correct_category&quot;] for r in results) / len(results)
+print(f&quot;Category accuracy: {accuracy:.1%}&quot;)
+</code></pre>
+<p>Run this eval suite every time you change a prompt. Prompts are code — they need tests.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

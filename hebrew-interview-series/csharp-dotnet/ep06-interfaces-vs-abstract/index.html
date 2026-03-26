@@ -1,0 +1,208 @@
+<h1>שיעור 6: Interfaces vs Abstract Classes — מתי להשתמש בכל אחד?</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>&quot;מה ההבדל בין Interface לAbstract Class?&quot; — שאלה קלאסית שנשמעת פשוטה.<br>
+אבל המראיין לא מחפש רק הגדרות. הוא רוצה לדעת שאתם מבינים <strong>מתי</strong> ולמה לבחור בכל אחד.<br>
+בשיעור הזה נלמד את ההבדלים, את הכללים ואת ה-default interface methods שמשנים את המשחק.</p>
+<hr>
+<h2>Interface — הגדרה</h2>
+<p><strong>Interface</strong> מגדיר <strong>חוזה</strong> (contract) — מה מחלקה יכולה לעשות, ללא implementation.</p>
+<pre><code class="language-csharp">public interface IAnimal
+{
+    string Name { get; }
+    void MakeSound();
+    
+    // Default implementation (C# 8+)
+    void Describe() =&gt; Console.WriteLine($&quot;I am {Name}&quot;);
+}
+
+public class Dog : IAnimal
+{
+    public string Name =&gt; &quot;Dog&quot;;
+    
+    public void MakeSound() =&gt; Console.WriteLine(&quot;Woof!&quot;);
+    // Describe() — משתמשים ב-default implementation
+}
+</code></pre>
+<hr>
+<h2>Abstract Class — הגדרה</h2>
+<p><strong>Abstract Class</strong> מגדיר <strong>בסיס חלקי</strong> — יכול להכיל implementation, fields, constructors.</p>
+<pre><code class="language-csharp">public abstract class Animal
+{
+    protected string _name;
+    
+    public Animal(string name) // Constructor — לא אפשרי ב-Interface
+    {
+        _name = name;
+    }
+    
+    public abstract void MakeSound(); // חייב להיות ממומש
+    
+    public virtual void Sleep() // אפשר לoverride
+    {
+        Console.WriteLine($&quot;{_name} is sleeping&quot;);
+    }
+    
+    public void Breathe() // implementation קבועה
+    {
+        Console.WriteLine($&quot;{_name} is breathing&quot;);
+    }
+}
+
+public class Dog : Animal
+{
+    public Dog() : base(&quot;Dog&quot;) { }
+    
+    public override void MakeSound() =&gt; Console.WriteLine(&quot;Woof!&quot;);
+}
+</code></pre>
+<hr>
+<h2>השוואה מלאה</h2>
+<table>
+<thead>
+<tr>
+<th>מאפיין</th>
+<th>Interface</th>
+<th>Abstract Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Multiple inheritance</td>
+<td>✅ כן</td>
+<td>❌ לא</td>
+</tr>
+<tr>
+<td>Fields/State</td>
+<td>❌ לא</td>
+<td>✅ כן</td>
+</tr>
+<tr>
+<td>Constructor</td>
+<td>❌ לא</td>
+<td>✅ כן</td>
+</tr>
+<tr>
+<td>Access modifiers</td>
+<td>✅ כן (C# 8+)</td>
+<td>✅ כן</td>
+</tr>
+<tr>
+<td>Default implementation</td>
+<td>✅ כן (C# 8+)</td>
+<td>✅ כן</td>
+</tr>
+<tr>
+<td>&quot;Is-a&quot; relationship</td>
+<td>לרוב לא</td>
+<td>כן</td>
+</tr>
+<tr>
+<td>&quot;Can-do&quot; relationship</td>
+<td>כן</td>
+<td>לפעמים</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>מתי להשתמש בכל אחד?</h2>
+<h3>Interface — כשמגדירים יכולת (capability)</h3>
+<pre><code class="language-csharp">// כלי שניתן לשמור
+public interface ISaveable
+{
+    Task SaveAsync();
+}
+
+// כלי שניתן לייצא
+public interface IExportable
+{
+    byte[] Export();
+}
+
+// מחלקה יכולה לממש שניהם!
+public class Document : ISaveable, IExportable
+{
+    public async Task SaveAsync() { /* ... */ }
+    public byte[] Export() { /* ... */ }
+}
+</code></pre>
+<h3>Abstract Class — כשיש קוד משותף</h3>
+<pre><code class="language-csharp">// כל ה-Repositories חולקים את אותה logique בסיסית
+public abstract class RepositoryBase&lt;T&gt;
+{
+    protected readonly DbContext _context;
+    
+    protected RepositoryBase(DbContext context)
+    {
+        _context = context;
+    }
+    
+    public abstract Task&lt;T?&gt; GetByIdAsync(int id);
+    
+    // shared implementation
+    public async Task&lt;List&lt;T&gt;&gt; GetAllAsync()
+    {
+        return await _context.Set&lt;T&gt;().ToListAsync();
+    }
+    
+    public async Task AddAsync(T entity)
+    {
+        await _context.Set&lt;T&gt;().AddAsync(entity);
+        await _context.SaveChangesAsync();
+    }
+}
+
+public class UserRepository : RepositoryBase&lt;User&gt;
+{
+    public UserRepository(DbContext context) : base(context) { }
+    
+    public override async Task&lt;User?&gt; GetByIdAsync(int id)
+        =&gt; await _context.Users.FindAsync(id);
+}
+</code></pre>
+<hr>
+<h2>Default Interface Methods (C# 8+)</h2>
+<p>מאפשרים הוספת implementation לinterface ללא שבירת מחלקות קיימות:</p>
+<pre><code class="language-csharp">public interface ILogger
+{
+    void Log(string message);
+    
+    // default implementation — backwards compatible
+    void LogError(string message) =&gt; Log($&quot;[ERROR] {message}&quot;);
+    void LogInfo(string message) =&gt; Log($&quot;[INFO] {message}&quot;);
+}
+
+// מחלקה ישנה לא שוברת
+public class ConsoleLogger : ILogger
+{
+    public void Log(string message) =&gt; Console.WriteLine(message);
+    // LogError ו-LogInfo עובדים ע&quot;י default!
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה ההבדל העיקרי?&quot;</h3>
+<p><strong>תשובה מלאה:</strong></p>
+<ul>
+<li>Interface = חוזה, מגדיר &quot;מה&quot;, multiple inheritance, ללא state</li>
+<li>Abstract class = בסיס חלקי, מגדיר &quot;מה + איך חלקי&quot;, single inheritance, יכול להכיל state</li>
+</ul>
+<h3>שאלה 2: &quot;מתי תבחר Interface?&quot;</h3>
+<p><strong>תשובה:</strong> כשרוצים להגדיר יכולת (capability) שמחלקות שונות ממשות, ובמיוחד כשצריך multiple inheritance.</p>
+<h3>שאלה 3: &quot;מתי תבחר Abstract Class?&quot;</h3>
+<p><strong>תשובה:</strong> כשיש קוד משותף (shared logic) שרוצים לחלוק בין מחלקות, ויש קשר &quot;is-a&quot; אמיתי.</p>
+<hr>
+<h2>הכלל האצבע</h2>
+<pre><code>Use Interface when:
+  ✓ Multiple implementations with no shared code
+  ✓ Multiple inheritance needed
+  ✓ Defining capabilities (IDisposable, IComparable)
+
+Use Abstract Class when:
+  ✓ Shared code between related classes
+  ✓ &quot;Is-a&quot; relationship (Dog IS-A Animal)
+  ✓ Need constructors or instance state
+</code></pre>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 6 מתוך 10</em></p>

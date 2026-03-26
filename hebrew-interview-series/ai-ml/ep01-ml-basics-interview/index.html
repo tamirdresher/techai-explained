@@ -1,0 +1,153 @@
+<h1>יסודות Machine Learning לראיון</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>ההבדל בין Supervised, Unsupervised ו-Reinforcement Learning</li>
+<li>ה-Bias/Variance Tradeoff — אחד המושגים הנפוצים ביותר בראיונות ML</li>
+<li>מדדי הערכה נפוצים ומתי להשתמש בכל אחד</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה ההבדל בין Supervised ל-Unsupervised Learning?</h3>
+<p><strong>תשובה:</strong>
+<strong>Supervised Learning (למידה מפוקחת):</strong>
+האלגוריתם לומד מנתוני אימון עם תוויות (labels) — כל דוגמה כוללת input ו-output ידוע. המטרה: ללמוד פונקציה שממפה inputs ל-outputs, ולהשתמש בה על נתונים חדשים שהתשובה עליהם לא ידועה.</p>
+<p>דוגמאות: סיווג אימיילים ל-spam/לא spam, חיזוי מחיר בית, זיהוי תמונות, תרגום שפות.</p>
+<p><strong>Unsupervised Learning (למידה בלתי מפוקחת):</strong>
+האלגוריתם לומד מנתונים ללא תוויות — מחפש patterns ומבנה נסתר בנתונים.</p>
+<p>דוגמאות: Clustering לקוחות לפי התנהגות (K-Means), Dimensionality Reduction (PCA), Anomaly Detection, Topic Modeling.</p>
+<p><strong>Semi-Supervised Learning:</strong> שילוב — מעט נתונים עם תוויות והרבה ללא תוויות. שימושי כאשר תיוג נתונים יקר.</p>
+<p><strong>Self-Supervised Learning:</strong> המודל מייצר labels מהנתונים עצמם (למשל: LLMs שמנבאים את המילה הבאה).</p>
+<p><strong>Reinforcement Learning:</strong> סוכן לומד ע&quot;י ניסוי-ושגיאה — מקבל reward על פעולות טובות ו-penalty על גרועות. שימוש: משחקים, רובוטיקה, RLHF ב-LLMs.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Supervised = labels ידועים; Unsupervised = חיפוש patterns ללא labels</li>
+<li>הבחירה תלויה בזמינות נתונים מתויגים ובמטרה</li>
+<li>Modern LLMs משתמשים ב-self-supervised + RLHF</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה Bias-Variance Tradeoff?</h3>
+<p><strong>תשובה:</strong>
+זהו אחד המושגים היסודיים ביותר ב-ML. שגיאת מודל ניתנת לפירוק לשלושה רכיבים: Bias, Variance ו-Irreducible Noise.</p>
+<p><strong>Bias (הטיה):</strong>
+הטעות שנובעת מהנחות מוטעות באלגוריתם. מודל עם bias גבוה מפשט יתר על המידה את הבעיה.</p>
+<ul>
+<li>תסמין: <strong>Underfitting</strong> — ביצועים גרועים גם על אימון וגם על validation</li>
+<li>דוגמה: ניסיון לפתור בעיה לא לינארית עם מודל לינארי</li>
+</ul>
+<p><strong>Variance (שונות):</strong>
+רגישות גבוהה לתנודות בנתוני אימון. מודל עם variance גבוה &quot;שינן&quot; את נתוני האימון ולא למד דפוס כללי.</p>
+<ul>
+<li>תסמין: <strong>Overfitting</strong> — ביצועים מעולים על אימון אך גרועים על validation</li>
+<li>דוגמה: decision tree עמוק מאוד שזוכר כל דוגמה</li>
+</ul>
+<p><strong>ה-Tradeoff:</strong>
+הפחתת bias (בדרך כלל ע&quot;י מודלים מורכבים יותר) מגדילה variance ולהיפך. יש למצוא את האיזון הנכון.</p>
+<p><strong>כיצד מתמודדים:</strong></p>
+<ul>
+<li>Underfitting: הגדל מורכבות המודל, הוסף features, הפחת regularization</li>
+<li>Overfitting: הוסף regularization (L1/L2), Dropout, Early Stopping, Cross-Validation, הוסף נתונים</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Bias גבוה = מודל פשוט מדי (underfitting)</li>
+<li>Variance גבוה = מודל מורכב מדי (overfitting)</li>
+<li>Cross-validation עוזרת לזהות ולאזן את ה-tradeoff</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה ההבדל בין Classification ל-Regression?</h3>
+<p><strong>תשובה:</strong>
+שניהם supervised learning, אך הoutput שונה:</p>
+<p><strong>Classification (סיווג):</strong>
+המודל מנבא קטגוריה דיסקרטית. Output הוא מחלקה מתוך סט מוגדר.</p>
+<ul>
+<li>Binary: spam/לא spam, חולה/בריא</li>
+<li>Multi-class: סיווג 1 מ-10 ספרות, זיהוי שפה</li>
+<li>Multi-label: תמונה יכולה להכיל גם &quot;חתול&quot; גם &quot;כלב&quot;</li>
+<li>אלגוריתמים: Logistic Regression, SVM, Random Forest, Neural Networks</li>
+<li>מדדים: Accuracy, Precision, Recall, F1-Score, AUC-ROC</li>
+</ul>
+<p><strong>Regression (רגרסיה):</strong>
+המודל מנבא ערך רציף (continuous).</p>
+<ul>
+<li>חיזוי מחיר בית, טמפרטורה, ביקוש מוצר</li>
+<li>אלגוריתמים: Linear Regression, Ridge, Lasso, Neural Networks</li>
+<li>מדדים: MSE, RMSE, MAE, R²</li>
+</ul>
+<p><strong>בעיה: Imbalanced Classes:</strong>
+כאשר אחת המחלקות נדירה (למשל: 1% fraud). Accuracy לא מתאים — מודל שתמיד יחזיר &quot;לא fraud&quot; יקבל accuracy=99%!
+פתרון: השתמש ב-Precision/Recall/F1, AUC-ROC, SMOTE לoversampling, class weights.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Classification = output קטגורי; Regression = output רציף</li>
+<li>לעולם אל תשתמש ב-Accuracy בלבד עם imbalanced classes</li>
+<li>F1-Score = הממוצע ההרמוני של Precision ו-Recall</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה זה Cross-Validation ולמה הוא חשוב?</h3>
+<p><strong>תשובה:</strong>
+Cross-Validation הוא שיטה להערכת ביצועי מודל שמפחיתה את השונות של מדד ה-evaluation.</p>
+<p><strong>K-Fold Cross-Validation:</strong></p>
+<ol>
+<li>מחלקים את הנתונים ל-K חלקים שווים (folds)</li>
+<li>בכל איטרציה: K-1 חלקים = אימון, 1 חלק = validation</li>
+<li>מריצים K פעמים, כל פעם fold שונה הוא ה-validation</li>
+<li>מחזירים ממוצע הביצועים על כל K הריצות</li>
+</ol>
+<p>יתרון: מנצל את כל הנתונים לאימון ולוולידציה, נותן הערכה יציבה יותר.</p>
+<p><strong>Leave-One-Out Cross-Validation (LOOCV):</strong> K = N (מספר הדוגמאות). יקר חישובית אך שימושי לdatasets קטנים.</p>
+<p><strong>Stratified K-Fold:</strong> מבטיח שכל fold שומר על פרופורציה זהה של מחלקות. חשוב ב-imbalanced datasets.</p>
+<p><strong>הפרדת Test Set:</strong>
+חשוב: test set צריך להיות נעול עד הערכה סופית! אם משתמשים ב-test set לכוונון hyperparameters, מתאכנסים לנתוני ה-test ומקבלים הערכה אופטימיסטית מדי.</p>
+<ul>
+<li>שלב 1: חלק נתונים ל-train+validation + test</li>
+<li>שלב 2: K-Fold על train+validation לבחירת hyperparameters</li>
+<li>שלב 3: אמן על כל train+validation עם הפרמטרים הטובים</li>
+<li>שלב 4: הערכה סופית על test set פעם אחת בלבד!</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Cross-validation עוזרת לזהות overfitting</li>
+<li>Test set צריך להיות &quot;locked&quot; עד הסוף</li>
+<li>Stratified K-Fold הכרחי ל-imbalanced data</li>
+</ul>
+<hr>
+<h3>שאלה 5: מה ההבדל בין Precision, Recall ו-F1?</h3>
+<p><strong>תשובה:</strong>
+שלושת המדדים רלוונטיים לבעיות classification, במיוחד כאשר classes לא מאוזנות.</p>
+<p><strong>ה-Confusion Matrix:</strong></p>
+<pre><code>              | Predicted Positive | Predicted Negative
+Actual Positive |  TP (True Pos)    |  FN (False Neg)
+Actual Negative |  FP (False Pos)   |  TN (True Neg)
+</code></pre>
+<p><strong>Precision (דיוק):</strong> מכל מה שחזיתי כ-positive, כמה היה נכון?
+<code>Precision = TP / (TP + FP)</code>
+גבוה כאשר: חשוב להמנע מ-false alarms (spam filter — לא רוצים לסמן אימייל לגיטימי כspam)</p>
+<p><strong>Recall (רגישות):</strong> מכל ה-positives האמיתיים, כמה זיהיתי?
+<code>Recall = TP / (TP + FN)</code>
+גבוה כאשר: חשוב לא לפספס מקרים (גילוי מחלות — לא רוצים לפספס חולה)</p>
+<p><strong>F1-Score:</strong> הממוצע ההרמוני של Precision ו-Recall.
+<code>F1 = 2 × (Precision × Recall) / (Precision + Recall)</code>
+גבוה רק אם שניהם גבוהים. שימושי כאשר יש tradeoff בין השניים.</p>
+<p><strong>AUC-ROC:</strong> מודד ביצוע על כל ה-thresholds — ממוצע של Recall על ציר ה-X ו-False Positive Rate על ציר ה-Y. AUC=0.5 = אקראי, AUC=1 = מושלם.</p>
+<p><strong>מתי מה:</strong></p>
+<ul>
+<li>Precision חשוב: spam detection, content moderation (עדיף לא לסנן מאשר לסנן בטעות)</li>
+<li>Recall חשוב: cancer detection, fraud (עדיף false alarm מאשר לפספס)</li>
+<li>F1: כאשר שניהם חשובים</li>
+<li>AUC-ROC: השוואת מודלים ללא תלות ב-threshold</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Accuracy גרועה ל-imbalanced data</li>
+<li>Precision vs Recall = tradeoff שמוגדר ע&quot;י הדרישות העסקיות</li>
+<li>F1 = ממוצע הרמוני (לא ממוצע רגיל) — עונש על חוסר איזון</li>
+</ul>
+<h2>סיכום</h2>
+<p>יסודות ML — supervised vs unsupervised, bias-variance tradeoff, ומדדי הערכה — הם הבסיס לכל ראיון ML. חשוב לא רק לדעת את ההגדרות, אלא להבין מתי כל מדד מתאים ואיך לפרש תוצאות. בפרקים הבאים נעמיק ב-neural networks, LLMs, ו-ML system design.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Hands-On Machine Learning — Aurélien Géron</li>
+<li>Pattern Recognition and Machine Learning — Bishop</li>
+<li>scikit-learn Documentation</li>
+<li>StatQuest with Josh Starmer (YouTube)</li>
+</ul>

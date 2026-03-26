@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Real-Time Dashboards with Server-Sent Events — TechAI Explained</title>
+  <meta name="description" content="A hands-on tutorial for building live-updating dashboards using Server-Sent Events — with a Node.js backend, vanilla JavaScript frontend, and production patterns for reconnection and scaling.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Architecture</span>
+      <time>March 4, 2026</time>
+      <span class="read-time">10 min read</span>
+    </div>
+    <h1>Building Real-Time Dashboards with Server-Sent Events</h1>
+    <p class="subtitle">A hands-on tutorial for building live-updating dashboards using Server-Sent Events — with a Node.js backend, vanilla JavaScript frontend, and production patterns for reconnection and scaling.</p>
+  </header>
+  <div class="article-body">
+    <p>Real-time dashboards show data the instant it changes — no refresh button, no polling intervals. Server-Sent Events (SSE) is the simplest way to build them. It's native to every browser, works through every proxy, and requires zero client-side libraries.</p>
+<p>This tutorial builds a live metrics dashboard from scratch.</p>
+<h2>What We're Building</h2>
+<div class="diagram-box">
+┌──────────────────────────────────────────────────┐
+│              LIVE METRICS DASHBOARD              │
+│                                                  │
+│  Active Users: 1,247 ▲         Requests/sec: 842│
+│  Error Rate:   0.3%  ▼         P95 Latency: 45ms│
+│                                                  │
+│  ┌──────────────────────────────────────┐        │
+│  │ Live Request Log                     │        │
+│  │ 10:42:01 GET  /api/orders    12ms ✅ │        │
+│  │ 10:42:01 POST /api/users     45ms ✅ │        │
+│  │ 10:42:02 GET  /api/search   203ms ⚠️ │        │
+│  │ 10:42:02 GET  /api/orders    8ms  ✅ │        │
+│  └──────────────────────────────────────┘        │
+│                                                  │
+│  All data updates in real-time via SSE           │
+│  No WebSocket. No polling. No libraries.         │
+└──────────────────────────────────────────────────┘
+</div>
+<h2>The Server: Node.js + Express</h2>
+<h3>Basic SSE Endpoint</h3>
+<pre><code class="language-typescript">import express from 'express';
+
+const app = express();
+app.use(express.static('public'));
+
+// Track connected clients
+const clients: Set&lt;express.Response&gt; = new Set();
+
+app.get('/events', (req, res) =&gt; {
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',  // Disable NGINX buffering
+  });
+
+  // Send initial connection event
+  res.write(`event: connected\ndata: ${JSON.stringify({
+    time: new Date().toISOString()
+  })}\n\n`);
+
+  // Register this client
+  clients.add(res);
+  console.log(`Client connected. Total: ${clients.size}`);
+
+  // Remove on disconnect
+  req.on('close', () =&gt; {
+    clients.delete(res);
+    console.log(`Client disconnected. Total: ${clients.size}`);
+  });
+});
+
+// Broadcast to all connected clients
+function broadcast(event: string, data: object) {
+  const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  clients.forEach(client =&gt; client.write(message));
+}
+
+app.listen(3000, () =&gt; console.log('Dashboard server on :3000'));
+</code></pre>
+<h3>Generating Metrics</h3>
+<pre><code class="language-typescript">// Simulate real-time metrics (replace with actual data sources)
+setInterval(() =&gt; {
+  broadcast('metrics', {
+    activeUsers: Math.floor(1200 + Math.random() * 100),
+    requestsPerSec: Math.floor(800 + Math.random() * 100),
+    errorRate: (Math.random() * 0.8).toFixed(2),
+    p95Latency: Math.floor(30 + Math.random() * 40),
+    timestamp: Date.now(),
+  });
+}, 1000);
+
+// Simulate request log entries
+setInterval(() =&gt; {
+  const methods = ['GET', 'POST', 'PUT', 'DELETE'];
+  const paths = ['/api/orders', '/api/users', '/api/search', '/api/products'];
+  const statusCodes = [200, 200, 200, 200, 200, 201, 400, 500];
+
+  broadcast('request', {
+    method: methods[Math.floor(Math.random() * methods.length)],
+    path: paths[Math.floor(Math.random() * paths.length)],
+    status: statusCodes[Math.floor(Math.random() * statusCodes.length)],
+    duration: Math.floor(Math.random() * 200),
+    timestamp: Date.now(),
+  });
+}, 200);
+</code></pre>
+<h2>The Client: Vanilla JavaScript</h2>
+<h3>Connecting to SSE</h3>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;title&gt;Live Dashboard&lt;/title&gt;
+  &lt;style&gt;
+    body { font-family: monospace; background: #0d1117; color: #e6edf3; padding: 2rem; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .metric { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; }
+    .metric .value { font-size: 2rem; font-weight: bold; color: #58a6ff; }
+    .metric .label { color: #8b949e; font-size: 0.9rem; }
+    .log { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem; max-height: 400px; overflow-y: auto; }
+    .log-entry { padding: 0.3rem 0; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
+    .status-ok { color: #3fb950; }
+    .status-err { color: #f85149; }
+    .status-warn { color: #d29922; }
+    #connection-status { margin-bottom: 1rem; }
+    .connected { color: #3fb950; }
+    .disconnected { color: #f85149; }
+  &lt;/style&gt;
+  &lt;script async src=&quot;https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;⚡ Live Dashboard&lt;/h1&gt;
+  &lt;div id=&quot;connection-status&quot; class=&quot;connected&quot;&gt;● Connected&lt;/div&gt;
+
+  &lt;div class=&quot;metrics&quot;&gt;
+    &lt;div class=&quot;metric&quot;&gt;&lt;div class=&quot;value&quot; id=&quot;active-users&quot;&gt;—&lt;/div&gt;&lt;div class=&quot;label&quot;&gt;Active Users&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;metric&quot;&gt;&lt;div class=&quot;value&quot; id=&quot;rps&quot;&gt;—&lt;/div&gt;&lt;div class=&quot;label&quot;&gt;Requests/sec&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;metric&quot;&gt;&lt;div class=&quot;value&quot; id=&quot;error-rate&quot;&gt;—&lt;/div&gt;&lt;div class=&quot;label&quot;&gt;Error Rate&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;metric&quot;&gt;&lt;div class=&quot;value&quot; id=&quot;p95&quot;&gt;—&lt;/div&gt;&lt;div class=&quot;label&quot;&gt;P95 Latency&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;h2&gt;Live Request Log&lt;/h2&gt;
+  &lt;div class=&quot;log&quot; id=&quot;request-log&quot;&gt;&lt;/div&gt;
+
+  &lt;script&gt;
+    const statusEl = document.getElementById('connection-status');
+    const logEl = document.getElementById('request-log');
+
+    function connect() {
+      const source = new EventSource('/events');
+
+      source.addEventListener('connected', (e) =&gt; {
+        statusEl.textContent = '● Connected';
+        statusEl.className = 'connected';
+      });
+
+      source.addEventListener('metrics', (e) =&gt; {
+        const data = JSON.parse(e.data);
+        document.getElementById('active-users').textContent = data.activeUsers.toLocaleString();
+        document.getElementById('rps').textContent = data.requestsPerSec;
+        document.getElementById('error-rate').textContent = data.errorRate + '%';
+        document.getElementById('p95').textContent = data.p95Latency + 'ms';
+      });
+
+      source.addEventListener('request', (e) =&gt; {
+        const data = JSON.parse(e.data);
+        const time = new Date(data.timestamp).toLocaleTimeString();
+        const statusClass = data.status &lt; 300 ? 'status-ok' :
+                           data.status &lt; 500 ? 'status-warn' : 'status-err';
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `&lt;span&gt;${time}&lt;/span&gt; `
+          + `&lt;span&gt;${data.method.padEnd(6)}&lt;/span&gt; `
+          + `&lt;span&gt;${data.path.padEnd(20)}&lt;/span&gt; `
+          + `&lt;span&gt;${String(data.duration).padStart(4)}ms&lt;/span&gt; `
+          + `&lt;span class=&quot;${statusClass}&quot;&gt;${data.status}&lt;/span&gt;`;
+        logEl.prepend(entry);
+
+        // Keep only last 100 entries
+        while (logEl.children.length &gt; 100) logEl.removeChild(logEl.lastChild);
+      });
+
+      source.onerror = () =&gt; {
+        statusEl.textContent = '● Reconnecting...';
+        statusEl.className = 'disconnected';
+        // EventSource auto-reconnects — no manual code needed!
+      };
+    }
+
+    connect();
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p><strong>Key point:</strong> <code>EventSource</code> auto-reconnects when the connection drops. No retry logic, no exponential backoff — the browser handles it natively.</p>
+<h2>Production Patterns</h2>
+<h3>Pattern 1: Event ID for Resume</h3>
+<p>If the connection drops, the client can resume from where it left off using <code>Last-Event-ID</code>:</p>
+<pre><code class="language-typescript">// Server: include event IDs
+let eventCounter = 0;
+
+function broadcast(event: string, data: object) {
+  eventCounter++;
+  const message = `id: ${eventCounter}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  clients.forEach(client =&gt; client.write(message));
+}
+
+// On reconnect, the browser sends Last-Event-ID header
+app.get('/events', (req, res) =&gt; {
+  const lastId = parseInt(req.headers['last-event-id'] || '0');
+
+  // Send any missed events since lastId
+  missedEvents
+    .filter(e =&gt; e.id &gt; lastId)
+    .forEach(e =&gt; res.write(`id: ${e.id}\nevent: ${e.event}\ndata: ${e.data}\n\n`));
+  // Then continue with live events...
+});
+</code></pre>
+<h3>Pattern 2: Heartbeat Keep-Alive</h3>
+<p>Proxies and load balancers may close idle connections. Send a heartbeat:</p>
+<pre><code class="language-typescript">// Server: send a comment (ignored by EventSource) every 15s
+setInterval(() =&gt; {
+  clients.forEach(client =&gt; client.write(': heartbeat\n\n'));
+}, 15000);
+</code></pre>
+<h3>Pattern 3: Channel-Based Subscriptions</h3>
+<p>Let clients subscribe to specific event types:</p>
+<pre><code class="language-typescript">app.get('/events', (req, res) =&gt; {
+  const channels = (req.query.channels as string || 'metrics,requests').split(',');
+
+  // Store client with their subscriptions
+  const client = { res, channels: new Set(channels) };
+  clients.add(client);
+
+  req.on('close', () =&gt; clients.delete(client));
+});
+
+function broadcast(event: string, data: object) {
+  clients.forEach(client =&gt; {
+    if (client.channels.has(event)) {
+      client.res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+  });
+}
+</code></pre>
+<p>Client subscribes to specific channels:</p>
+<pre><code class="language-javascript">const source = new EventSource('/events?channels=metrics,alerts');
+</code></pre>
+<h3>Pattern 4: Scaling with Redis Pub/Sub</h3>
+<p>For multiple server instances behind a load balancer, use Redis to broadcast events across all instances:</p>
+<pre><code class="language-typescript">import Redis from 'ioredis';
+
+const redisSub = new Redis();
+const redisPub = new Redis();
+
+// Publish events to Redis (from any server instance)
+function publishEvent(event: string, data: object) {
+  redisPub.publish('dashboard-events', JSON.stringify({ event, data }));
+}
+
+// Each server instance subscribes and forwards to its SSE clients
+redisSub.subscribe('dashboard-events');
+redisSub.on('message', (channel, message) =&gt; {
+  const { event, data } = JSON.parse(message);
+  clients.forEach(client =&gt; {
+    client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  });
+});
+</code></pre>
+<div class="diagram-box">
+SCALING SSE WITH REDIS
+<p>Client A ──► Server 1 ◄──┐
+Client B ──► Server 1     │
+├── Redis Pub/Sub
+Client C ──► Server 2 ◄──┘
+Client D ──► Server 2</p>
+<p>Any server publishes to Redis.
+All servers receive and forward to their connected clients.
+Every client sees every event.</p>
+</div>
+<h2>SSE vs Polling vs WebSocket for Dashboards</h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Latency</th>
+<th>Complexity</th>
+<th>Server Load</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Polling (1s)</td>
+<td>Up to 1s delay</td>
+<td>Lowest</td>
+<td>Highest (constant requests)</td>
+</tr>
+<tr>
+<td>Long Polling</td>
+<td>Near-instant</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>SSE</td>
+<td>Instant</td>
+<td>Low</td>
+<td>Low (one connection)</td>
+</tr>
+<tr>
+<td>WebSocket</td>
+<td>Instant</td>
+<td>Highest</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<p>For dashboards that only need server-to-client data flow, SSE is the optimal choice. It's simpler than WebSocket, more efficient than polling, and works natively in every browser.</p>
+<h2>When to Choose Something Else</h2>
+<ul>
+<li><strong>Bidirectional communication</strong> (chat, collaboration) → WebSocket</li>
+<li><strong>Binary data streaming</strong> (video, audio) → WebSocket</li>
+<li><strong>Millions of concurrent connections</strong> → WebSocket with custom protocol</li>
+<li><strong>Server-to-server streaming</strong> → gRPC</li>
+</ul>
+<p>For everything else — dashboards, notifications, live feeds, LLM streaming — SSE is the right default.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

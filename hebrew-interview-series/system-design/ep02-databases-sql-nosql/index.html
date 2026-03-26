@@ -1,0 +1,128 @@
+<h1>מסדי נתונים — SQL vs NoSQL</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>ההבדלים היסודיים בין SQL ל-NoSQL ומתי לבחור כל אחד</li>
+<li>אסטרטגיות sharding ו-replication לסקלאביליות</li>
+<li>טכניקות אינדוקס וכיצד הן משפרות ביצועים</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה ההבדל העיקרי בין SQL ל-NoSQL?</h3>
+<p><strong>תשובה:</strong>
+<strong>SQL (Relational Databases)</strong> כגון MySQL, PostgreSQL ו-SQL Server, מאחסנים נתונים בטבלאות עם schema מוגדר מראש. הם מספקים ACID transactions (Atomicity, Consistency, Isolation, Durability) ותומכים ב-JOIN מורכבים. מתאימים לנתונים מובנים עם קשרים ברורים.</p>
+<p><strong>NoSQL</strong> כוללת מספר סוגים:</p>
+<ul>
+<li><strong>Document stores</strong> (MongoDB, CouchDB) — מאחסנים JSON documents, גמישים ב-schema</li>
+<li><strong>Key-Value stores</strong> (Redis, DynamoDB) — מהירים ביותר לגישה לפי מפתח</li>
+<li><strong>Column-family</strong> (Cassandra, HBase) — מתאים לכמויות נתונים ענקיות עם כתיבות כבדות</li>
+<li><strong>Graph databases</strong> (Neo4j) — מתאים לנתונים בעלי קשרים מורכבים (רשתות חברתיות)</li>
+</ul>
+<p>NoSQL בדרך כלל מאפשר scale אופקי קל יותר, אך לרוב מוותר על עקביות מלאה לטובת זמינות וביצועים.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>SQL: schema נוקשה, ACID, מתאים לנתונים מובנים</li>
+<li>NoSQL: schema גמיש, BASE, מתאים ל-scale גדול</li>
+<li>הבחירה תלויה בדרישות העסקיות ובטיב הנתונים</li>
+</ul>
+<hr>
+<h3>שאלה 2: מתי תבחר NoSQL על פני SQL?</h3>
+<p><strong>תשובה:</strong>
+תבחר NoSQL כאשר:</p>
+<ol>
+<li><strong>Scale ענק</strong> — צריך לאחסן ולקרוא מיליארדי רשומות (Cassandra עובד טוב עם petabytes של נתונים)</li>
+<li><strong>Schema לא ידוע מראש</strong> — המבנה משתנה תדיר, כמו catalog של מוצרים עם תכונות שונות</li>
+<li><strong>כתיבות כבדות</strong> — מערכת כמו log aggregation שמקבלת מיליוני events לשנייה</li>
+<li><strong>Latency נמוך מאוד</strong> — Redis כ-cache מחזיר תשובות ב-sub-millisecond</li>
+<li><strong>נתוני גרף</strong> — רשתות חברתיות, recommendation engines</li>
+</ol>
+<p>תבחר SQL כאשר:</p>
+<ol>
+<li>הנתונים מובנים עם קשרים מורכבים וצריך JOINs</li>
+<li>נדרשת עקביות חזקה ו-ACID transactions (בנקאות, הזמנות)</li>
+<li>הצוות מכיר SQL ויש legacy code שמשתמש בו</li>
+</ol>
+<p>בפועל, רוב המערכות הגדולות משתמשות בשני הסוגים — SQL לנתוני ה-core ו-NoSQL ל-cache, sessions, logs.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>NoSQL ≠ תמיד יותר טוב — יש trade-offs ברורים</li>
+<li>שימוש משולב (polyglot persistence) הוא גישה נפוצה</li>
+<li>תמיד שאל: מה דרישות ה-consistency? מה ה-scale?</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה זה Database Sharding ואיך זה עובד?</h3>
+<p><strong>תשובה:</strong>
+Sharding הוא שיטה לפיצול אופקי של מסד נתונים — במקום לשמור את כל הנתונים בשרת אחד, מפצלים אותם למספר שרדים (shards), כל אחד מחזיק חלק מהנתונים.</p>
+<p><strong>שיטות Sharding נפוצות:</strong></p>
+<ol>
+<li><strong>Hash-based sharding</strong> — מחשבים hash על ה-key ומחלקים לפי תוצאה. פיזור טוב אך קשה לשינוי מספר ה-shards</li>
+<li><strong>Range-based sharding</strong> — מחלקים לפי טווח ערכים (למשל: user_id 1-1M בshard א', 1M-2M בshard ב'). פשוט אך עלול לגרום לעומסים לא שווים (hotspots)</li>
+<li><strong>Directory-based sharding</strong> — lookup table שמצביעה לאיזה shard שייכת כל רשומה. גמיש אך מוסיף latency</li>
+</ol>
+<p><strong>אתגרי Sharding:</strong></p>
+<ul>
+<li>Cross-shard queries קשות ויקרות</li>
+<li>Rebalancing כאשר מוסיפים shards</li>
+<li>נדרש application-level sharding logic</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Sharding פותר בעיות scale אך מוסיף מורכבות</li>
+<li>יש להימנע מ-hotspots בבחירת shard key</li>
+<li>Consistent hashing מפחית rebalancing עם הוספת nodes</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה ההבדל בין Database Indexes לבין Full Table Scan?</h3>
+<p><strong>תשובה:</strong>
+<strong>Full Table Scan</strong> — מסד הנתונים קורא כל שורה בטבלה כדי למצוא התאמות. סיבוכיות O(n). מקובל לטבלאות קטנות, אך הורס ביצועים בטבלאות של מיליוני שורות.</p>
+<p><strong>Index</strong> — מבנה נתונים נוסף (בדרך כלל B-Tree) שמאחסן את ערכי העמודה יחד עם הצבעה לשורה המקורית. מאפשר חיפוש ב-O(log n) במקום O(n).</p>
+<p><strong>סוגי Indexes:</strong></p>
+<ul>
+<li><strong>B-Tree Index</strong> — הנפוץ ביותר, מתאים לחיפוש על טווחים ושיוויון</li>
+<li><strong>Hash Index</strong> — מהיר לחיפוש שיוויון בלבד, לא תומך ב-range queries</li>
+<li><strong>Composite Index</strong> — על מספר עמודות, חשוב לשים לב לסדר העמודות</li>
+<li><strong>Covering Index</strong> — Index שמכסה את כל העמודות שהשאילתה צריכה, נמנע מגישה לטבלה עצמה</li>
+</ul>
+<p><strong>מתי לא להוסיף Index:</strong></p>
+<ul>
+<li>על עמודות עם cardinality נמוך (כמו gender)</li>
+<li>על טבלאות שרובן כתיבות — כל כתיבה מעדכנת את ה-index</li>
+<li>יותר מדי indexes מאטים INSERT/UPDATE/DELETE</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Index מאיץ קריאות אך מאט כתיבות</li>
+<li>יש לזהות את השאילתות הכבדות (slow query log) לפני הוספת indexes</li>
+<li>Explain/Query Plan הוא הכלי לבדיקת שימוש ב-index</li>
+</ul>
+<hr>
+<h3>שאלה 5: מה זה Database Replication ולמה זה חשוב?</h3>
+<p><strong>תשובה:</strong>
+Replication הוא תהליך של שמירת עותקים של מסד הנתונים במספר שרתים סימולטנית.</p>
+<p><strong>מודלים עיקריים:</strong></p>
+<ol>
+<li><strong>Master-Slave (Primary-Replica)</strong> — כל הכתיבות הולכות ל-primary, הקריאות מתפזרות בין ה-replicas. פשוט אך Primary הוא single point of failure</li>
+<li><strong>Master-Master</strong> — שני שרתים מקבלים כתיבות. מורכב יותר, מצריך conflict resolution</li>
+<li><strong>Synchronous Replication</strong> — Primary מאשר כתיבה רק אחרי ש-replica אישר. מבטיח עקביות אך מוסיף latency</li>
+<li><strong>Asynchronous Replication</strong> — Primary מאשר מיד, replica מתעדכן בהמשך. מהיר יותר אך ייתכן אובדן נתונים בכשל</li>
+</ol>
+<p><strong>יתרונות Replication:</strong></p>
+<ul>
+<li>High Availability — אם Primary נכשל, אפשר לעשות failover ל-replica</li>
+<li>Read Scaling — ניתן לפזר קריאות בין replicas</li>
+<li>Geographic distribution — replica קרוב יותר לגיאוגרפיה של המשתמשים</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Replication != Backup (שניהם צריכים להיות)</li>
+<li>Replication lag הוא בעיה ב-async replication</li>
+<li>Multi-region replication מורכבת אך קריטית למערכות גלובליות</li>
+</ul>
+<h2>סיכום</h2>
+<p>הבחירה בין SQL ל-NoSQL תלויה בדרישות המערכת — אין פתרון &quot;תמיד נכון&quot;. שאלות על databases בראיון בוחנות הבנת trade-offs: consistency מול availability, read performance מול write performance, schema flexibility מול data integrity. Sharding ו-replication הן כלים חיוניים לסקלאביליות, ו-indexing הוא אחד מהכלים החשובים ביותר לאופטימיזציה של ביצועים.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Designing Data-Intensive Applications — Martin Kleppmann</li>
+<li>Use The Index, Luke (use-the-index-luke.com)</li>
+<li>MongoDB Documentation — Data Modeling</li>
+<li>PostgreSQL Documentation — Indexes</li>
+</ul>

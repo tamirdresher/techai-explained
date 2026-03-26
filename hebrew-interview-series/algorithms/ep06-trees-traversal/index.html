@@ -1,0 +1,153 @@
+<h1>שיעור 6: עצים ו-Traversal — BFS, DFS וBinary Trees</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>עצים הם הנושא הכי נפוץ בראיונות אחרי arrays.<br>
+BFS ו-DFS הם שתי הגישות הבסיסיות שצריך לדעת בעיניים עצומות.</p>
+<hr>
+<h2>TreeNode</h2>
+<pre><code class="language-csharp">public class TreeNode
+{
+    public int Val;
+    public TreeNode? Left, Right;
+    
+    public TreeNode(int val = 0, TreeNode? left = null, TreeNode? right = null)
+    {
+        Val = val; Left = left; Right = right;
+    }
+}
+</code></pre>
+<hr>
+<h2>DFS — Depth First Search</h2>
+<h3>InOrder (Left → Root → Right) — יוצא ממוין מ-BST</h3>
+<pre><code class="language-csharp">IList&lt;int&gt; InOrder(TreeNode? root)
+{
+    var result = new List&lt;int&gt;();
+    
+    void Traverse(TreeNode? node)
+    {
+        if (node == null) return;
+        Traverse(node.Left);
+        result.Add(node.Val);
+        Traverse(node.Right);
+    }
+    
+    Traverse(root);
+    return result;
+}
+</code></pre>
+<h3>PreOrder (Root → Left → Right)</h3>
+<pre><code class="language-csharp">void PreOrder(TreeNode? node, IList&lt;int&gt; result)
+{
+    if (node == null) return;
+    result.Add(node.Val);       // Root קודם
+    PreOrder(node.Left, result);
+    PreOrder(node.Right, result);
+}
+</code></pre>
+<hr>
+<h2>BFS — Breadth First Search (Level Order)</h2>
+<pre><code class="language-csharp">IList&lt;IList&lt;int&gt;&gt; LevelOrder(TreeNode? root)
+{
+    var result = new List&lt;IList&lt;int&gt;&gt;();
+    if (root == null) return result;
+    
+    var queue = new Queue&lt;TreeNode&gt;();
+    queue.Enqueue(root);
+    
+    while (queue.Count &gt; 0)
+    {
+        int levelSize = queue.Count;
+        var level = new List&lt;int&gt;();
+        
+        for (int i = 0; i &lt; levelSize; i++)
+        {
+            var node = queue.Dequeue();
+            level.Add(node.Val);
+            
+            if (node.Left != null) queue.Enqueue(node.Left);
+            if (node.Right != null) queue.Enqueue(node.Right);
+        }
+        result.Add(level);
+    }
+    return result;
+}
+</code></pre>
+<hr>
+<h2>Maximum Depth</h2>
+<pre><code class="language-csharp">int MaxDepth(TreeNode? root)
+{
+    if (root == null) return 0;
+    return 1 + Math.Max(MaxDepth(root.Left), MaxDepth(root.Right));
+}
+</code></pre>
+<hr>
+<h2>Validate BST</h2>
+<pre><code class="language-csharp">bool IsValidBST(TreeNode? root,
+    long min = long.MinValue, long max = long.MaxValue)
+{
+    if (root == null) return true;
+    if (root.Val &lt;= min || root.Val &gt;= max) return false;
+    
+    return IsValidBST(root.Left, min, root.Val) &amp;&amp;
+           IsValidBST(root.Right, root.Val, max);
+}
+</code></pre>
+<hr>
+<h2>Lowest Common Ancestor</h2>
+<pre><code class="language-csharp">TreeNode? LCA(TreeNode? root, TreeNode p, TreeNode q)
+{
+    if (root == null || root == p || root == q) return root;
+    
+    var left = LCA(root.Left, p, q);
+    var right = LCA(root.Right, p, q);
+    
+    if (left != null &amp;&amp; right != null) return root; // p וq בצדדים שונים
+    return left ?? right;
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מתי BFS ומתי DFS?&quot;</h3>
+<p><strong>תשובה:</strong></p>
+<ul>
+<li><strong>BFS:</strong> מצא shortest path, level-order, &quot;קרוב ביותר&quot;</li>
+<li><strong>DFS:</strong> בדיקת מסלולים, backtracking, depth-based</li>
+</ul>
+<h3>שאלה 2: &quot;מה הסיבוכיות של tree traversal?&quot;</h3>
+<p><strong>תשובה:</strong> O(n) time — מבקרים כל node פעם. O(h) space — h הוא עומק העץ (Stack recursion). עץ מאוזן: O(log n), worst case: O(n).</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>Traversal</th>
+<th>סדר</th>
+<th>שימוש</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>InOrder</td>
+<td>L-Root-R</td>
+<td>ממוין מBST</td>
+</tr>
+<tr>
+<td>PreOrder</td>
+<td>Root-L-R</td>
+<td>Copy עץ</td>
+</tr>
+<tr>
+<td>PostOrder</td>
+<td>L-R-Root</td>
+<td>מחיקת עץ</td>
+</tr>
+<tr>
+<td>BFS</td>
+<td>Level by level</td>
+<td>Shortest path</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 6 מתוך 10</em></p>

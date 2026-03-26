@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Understanding AI Agents: Architecture Patterns That Work — TechAI Explained</title>
+  <meta name="description" content="A deep dive into the architecture patterns behind modern AI agents — from simple ReAct loops to multi-agent orchestration systems that power production applications.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">AI</span>
+      <time>March 18, 2026</time>
+      <span class="read-time">12 min read</span>
+    </div>
+    <h1>Understanding AI Agents: Architecture Patterns That Work</h1>
+    <p class="subtitle">A deep dive into the architecture patterns behind modern AI agents — from simple ReAct loops to multi-agent orchestration systems that power production applications.</p>
+  </header>
+  <div class="article-body">
+    <p>Every major tech company is shipping AI agents in 2026. But behind the marketing buzzwords, what actually makes an AI agent work? And more importantly — what architecture patterns separate the demos from production systems?</p>
+<p>This guide breaks down the four dominant agent architecture patterns, with code examples you can adapt to your own projects.</p>
+<h2>What Is an AI Agent, Really?</h2>
+<p>An AI agent is software that uses a language model to <strong>decide</strong> what actions to take, <strong>execute</strong> those actions using tools, and <strong>iterate</strong> based on the results. Unlike a simple chatbot that responds to prompts, an agent has a loop:</p>
+<div class="diagram-box">
+┌─────────────────────────────────────────────┐
+│              THE AGENT LOOP                 │
+│                                             │
+│   Observe ──► Think ──► Act ──► Observe     │
+│      ▲                            │         │
+│      └────────────────────────────┘         │
+│                                             │
+│   The agent keeps looping until the task    │
+│   is complete or a stop condition is met.   │
+└─────────────────────────────────────────────┘
+</div>
+<p>The key distinction: <strong>a chatbot responds once; an agent loops until the job is done.</strong></p>
+<p>Three properties define a true agent:</p>
+<ol>
+<li><strong>Autonomy</strong> — it decides which tools to use and in what order</li>
+<li><strong>Tool use</strong> — it can call APIs, run code, read files, query databases</li>
+<li><strong>Memory</strong> — it maintains context across its action loop</li>
+</ol>
+<h2>Pattern 1: The ReAct Loop</h2>
+<p>The simplest and most widely-used pattern is <strong>ReAct</strong> (Reasoning + Acting). The model alternates between reasoning about what to do and taking an action.</p>
+<pre><code class="language-python">class ReActAgent:
+    def __init__(self, llm, tools):
+        self.llm = llm
+        self.tools = {t.name: t for t in tools}
+        self.max_steps = 10
+
+    def run(self, task: str) -&gt; str:
+        messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}]
+        
+        for step in range(self.max_steps):
+            # THINK: Ask the LLM what to do
+            response = self.llm.chat(messages, tools=self.tools)
+            
+            if response.is_final_answer:
+                return response.content
+            
+            # ACT: Execute the chosen tool
+            tool_name = response.tool_call.name
+            tool_args = response.tool_call.arguments
+            result = self.tools[tool_name].execute(**tool_args)
+            
+            # OBSERVE: Feed result back
+            messages.append({&quot;role&quot;: &quot;tool&quot;, &quot;content&quot;: result})
+        
+        return &quot;Max steps reached without resolution.&quot;
+</code></pre>
+<h3>When to Use ReAct</h3>
+<ul>
+<li>Single-purpose tasks: &quot;Find the bug in this function&quot;</li>
+<li>Linear workflows where each step informs the next</li>
+<li>Prototyping — it's the fastest pattern to implement</li>
+</ul>
+<h3>Limitations</h3>
+<p>ReAct struggles with tasks that require <strong>parallel work</strong> or <strong>planning ahead</strong>. It's purely reactive — the model only thinks one step at a time.</p>
+<h2>Pattern 2: Plan-and-Execute</h2>
+<p>This pattern separates <strong>planning</strong> from <strong>execution</strong>. A planner model creates a full plan upfront, then an executor works through each step.</p>
+<pre><code class="language-python">class PlanAndExecuteAgent:
+    def __init__(self, planner_llm, executor_llm, tools):
+        self.planner = planner_llm
+        self.executor = executor_llm
+        self.tools = tools
+
+    def run(self, task: str) -&gt; str:
+        # Phase 1: Create the plan
+        plan = self.planner.chat([
+            {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Create a step-by-step plan.&quot;},
+            {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}
+        ])
+        
+        steps = parse_plan(plan.content)
+        results = []
+        
+        # Phase 2: Execute each step
+        for step in steps:
+            result = self.executor.chat([
+                {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: f&quot;Execute: {step}&quot;},
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: f&quot;Prior results: {results}&quot;}
+            ], tools=self.tools)
+            results.append(result)
+        
+        # Phase 3: Synthesize
+        return self.planner.summarize(task, results)
+</code></pre>
+<div class="diagram-box">
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│ PLANNER  │────►│ EXECUTOR │────►│ EXECUTOR │──► ...
+│          │     │ Step 1   │     │ Step 2   │
+│ Creates  │     │          │     │          │
+│ full plan│     │ Uses     │     │ Uses     │
+│ upfront  │     │ tools    │     │ results  │
+└──────────┘     └──────────┘     └──────────┘
+                                       │
+                                       ▼
+                                 ┌──────────┐
+                                 │SYNTHESIZE│
+                                 │ Final    │
+                                 │ answer   │
+                                 └──────────┘
+</div>
+<h3>When to Use Plan-and-Execute</h3>
+<ul>
+<li>Complex multi-step tasks: &quot;Refactor this module and update all tests&quot;</li>
+<li>When you need <strong>predictability</strong> — the user can review the plan before execution</li>
+<li>Tasks where total cost matters (the plan constrains token usage)</li>
+</ul>
+<h2>Pattern 3: Multi-Agent Orchestration</h2>
+<p>For complex systems, a single agent isn't enough. Multi-agent orchestration uses <strong>specialized agents</strong> coordinated by a <strong>router</strong> or <strong>orchestrator</strong>.</p>
+<pre><code class="language-python">class MultiAgentOrchestrator:
+    def __init__(self, agents: dict, router_llm):
+        self.agents = agents  # {&quot;coder&quot;: CoderAgent, &quot;reviewer&quot;: ReviewAgent, ...}
+        self.router = router_llm
+
+    def run(self, task: str) -&gt; str:
+        # Router decides which agent handles the task
+        routing = self.router.chat([
+            {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: self.routing_prompt()},
+            {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}
+        ])
+        
+        agent_name = routing.selected_agent
+        agent = self.agents[agent_name]
+        
+        # Delegate to the specialist
+        result = agent.run(task)
+        
+        # Optionally pass to another agent for review
+        if routing.needs_review:
+            review = self.agents[&quot;reviewer&quot;].run(
+                f&quot;Review this output:\n{result}&quot;
+            )
+            return f&quot;{result}\n\nReview: {review}&quot;
+        
+        return result
+</code></pre>
+<div class="diagram-box">
+                    ┌──────────────┐
+       Task ───────►│   ROUTER     │
+                    │              │
+                    │ Analyzes the │
+                    │ task and     │
+                    │ delegates    │
+                    └──────┬───────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │  CODER   │ │ RESEARCHER│ │ REVIEWER │
+        │  Agent   │ │  Agent   │ │  Agent   │
+        │          │ │          │ │          │
+        │ Writes & │ │ Searches │ │ Checks   │
+        │ edits    │ │ docs &   │ │ quality  │
+        │ code     │ │ data     │ │ & style  │
+        └──────────┘ └──────────┘ └──────────┘
+</div>
+<h3>Real-World Example: Code Review Pipeline</h3>
+<p>A production code review system might use three agents:</p>
+<ol>
+<li><strong>Security Agent</strong> — scans for vulnerabilities, credential leaks, injection risks</li>
+<li><strong>Logic Agent</strong> — checks for bugs, race conditions, edge cases</li>
+<li><strong>Style Agent</strong> — enforces conventions, naming patterns, documentation</li>
+</ol>
+<p>Each agent has different system prompts, different tools, and different evaluation criteria. The orchestrator merges their feedback into a single review.</p>
+<h2>Pattern 4: Reflexion (Self-Correcting Agents)</h2>
+<p>The most advanced pattern adds <strong>self-evaluation</strong>. After producing output, the agent critiques its own work and iterates.</p>
+<pre><code class="language-python">class ReflexionAgent:
+    def __init__(self, actor_llm, critic_llm, tools):
+        self.actor = actor_llm
+        self.critic = critic_llm
+        self.tools = tools
+        self.max_reflections = 3
+
+    def run(self, task: str) -&gt; str:
+        attempt = self.actor.chat(
+            [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}],
+            tools=self.tools
+        )
+        
+        for i in range(self.max_reflections):
+            # Self-evaluate
+            critique = self.critic.chat([{
+                &quot;role&quot;: &quot;user&quot;,
+                &quot;content&quot;: f&quot;Task: {task}\nAttempt:\n{attempt}\n\n&quot;
+                           f&quot;Is this correct and complete? &quot;
+                           f&quot;If not, what needs to change?&quot;
+            }])
+            
+            if critique.is_satisfactory:
+                return attempt.content
+            
+            # Retry with feedback
+            attempt = self.actor.chat([
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task},
+                {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: attempt.content},
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: f&quot;Feedback: {critique.content}&quot;}
+            ], tools=self.tools)
+        
+        return attempt.content
+</code></pre>
+<h3>When to Use Reflexion</h3>
+<ul>
+<li>High-stakes outputs: code generation, data analysis, report writing</li>
+<li>When you can define clear <strong>evaluation criteria</strong></li>
+<li>When the cost of iteration is lower than the cost of errors</li>
+</ul>
+<h2>Choosing the Right Pattern</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Complexity</th>
+<th>Best For</th>
+<th>Watch Out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReAct</td>
+<td>Low</td>
+<td>Single tasks, prototypes</td>
+<td>Gets stuck on complex multi-step work</td>
+</tr>
+<tr>
+<td>Plan-and-Execute</td>
+<td>Medium</td>
+<td>Predictable workflows</td>
+<td>Plans can become stale mid-execution</td>
+</tr>
+<tr>
+<td>Multi-Agent</td>
+<td>High</td>
+<td>Complex systems, specialized domains</td>
+<td>Coordination overhead, debugging difficulty</td>
+</tr>
+<tr>
+<td>Reflexion</td>
+<td>Medium-High</td>
+<td>Quality-critical outputs</td>
+<td>Token cost multiplies with iterations</td>
+</tr>
+</tbody>
+</table>
+<h2>Production Considerations</h2>
+<h3>1. Guard Rails Are Non-Negotiable</h3>
+<p>Every production agent needs:</p>
+<ul>
+<li><strong>Token budgets</strong> — cap the maximum loop iterations and total tokens</li>
+<li><strong>Tool allowlists</strong> — restrict which tools the agent can call</li>
+<li><strong>Output validation</strong> — schema validation on structured outputs</li>
+<li><strong>Human-in-the-loop</strong> — escalation paths for uncertain decisions</li>
+</ul>
+<h3>2. Observability</h3>
+<p>You cannot debug agents with <code>console.log</code>. You need:</p>
+<ul>
+<li><strong>Trace IDs</strong> across every LLM call and tool invocation</li>
+<li><strong>Step-by-step logging</strong> of the agent's reasoning</li>
+<li><strong>Cost tracking</strong> per task (tokens consumed, API calls made)</li>
+<li><strong>Latency breakdowns</strong> showing where time is spent</li>
+</ul>
+<h3>3. Evaluation</h3>
+<p>Before deploying, build an eval suite:</p>
+<pre><code class="language-python">eval_cases = [
+    {&quot;input&quot;: &quot;Find all Python files with SQL injection risks&quot;,
+     &quot;expected_tools&quot;: [&quot;grep&quot;, &quot;file_read&quot;],
+     &quot;expected_output_contains&quot;: [&quot;parameterized&quot;, &quot;sanitize&quot;]},
+]
+
+for case in eval_cases:
+    result = agent.run(case[&quot;input&quot;])
+    assert all(t in result.tools_used for t in case[&quot;expected_tools&quot;])
+    assert all(k in result.output for k in case[&quot;expected_output_contains&quot;])
+</code></pre>
+<h2>What's Next</h2>
+<p>The agent landscape is moving fast. Key trends to watch:</p>
+<ul>
+<li><strong>MCP (Model Context Protocol)</strong> — standardizing how agents connect to tools</li>
+<li><strong>Agent-to-agent communication</strong> — agents delegating to other agents across organizational boundaries</li>
+<li><strong>Persistent memory</strong> — agents that learn from past interactions and improve over time</li>
+<li><strong>Formal verification</strong> — mathematical guarantees about agent behavior</li>
+</ul>
+<p>The pattern you choose matters less than the guardrails you put around it. Start with ReAct, graduate to multi-agent when your use case demands it, and always instrument everything.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

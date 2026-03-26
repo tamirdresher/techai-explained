@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> — TechAI Explained</title>
+  <meta name="description" content="Complex tech. Simple explanations. Tutorials on AI, DevOps, and modern software engineering.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Tutorial</span>
+      <time>Invalid Date</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1></h1>
+    <p class="subtitle"></p>
+  </header>
+  <div class="article-body">
+    <h1>Video 2: &quot;Ralph Never Sleeps: Building an Autonomous AI Work Pipeline&quot;</h1>
+<p><strong>Channel:</strong> TechAI Explained
+<strong>Duration:</strong> 6–8 minutes
+<strong>Style:</strong> Deep-dive technical walkthrough with live terminal demos</p>
+<hr>
+<h2>INTRO (0:00–0:40)</h2>
+<p>[VISUAL] Time-lapse of a clock going from midnight to 6 AM. Cut to a terminal with GitHub notifications streaming in — issues being triaged, branches created, PRs opened. All while the screen shows &quot;User: Away.&quot;</p>
+<p>[NARRATION] It's 3 AM. You're sleeping. But your development team isn't. Ralph is scanning your GitHub issues, finding work that matches team capabilities, spawning agents to handle it, and opening pull requests — all without you lifting a finger. By the time you wake up, there are three PRs waiting for review. This is Ralph, and today I'm going to show you how to set up an autonomous AI work pipeline that never stops shipping.</p>
+<hr>
+<h2>WHAT IS RALPH? (0:40–2:00)</h2>
+<p>[VISUAL] Show the Squad architecture diagram, highlighting Ralph as a persistent monitoring agent. Zoom into the Ralph section.</p>
+<p>[NARRATION] In the last video, we saw how Squad gives you a team of AI agents. But that team still needed YOU to tell it what to do. Ralph changes that. Ralph is a persistent agent session — think of it as a work monitor — that subscribes to everything happening in your project.</p>
+<p>[VISUAL] Show the Ralph monitor initialization code:</p>
+<pre><code class="language-typescript">const ralph = new RalphMonitor({
+  teamRoot: '.squad',
+  healthCheckInterval: 30000,
+  statePath: '.squad/ralph-state.json',
+});
+</code></pre>
+<p>[NARRATION] Ralph runs on a configurable polling loop. Every few minutes, it checks your GitHub issues for new work. When it finds something tagged for the team, it triages it — figures out which agent should handle it — and kicks off the work automatically.</p>
+<p>[VISUAL] Show the <code>squad triage</code> command in the terminal.</p>
+<p>[NARRATION] You can start Ralph with <code>squad triage</code> — or its aliases <code>squad watch</code> or <code>squad loop</code>. By default it polls every 10 minutes, but you can customize that with the <code>--interval</code> flag. Ralph then enters what I call the autonomous work loop.</p>
+<hr>
+<h2>THE AUTONOMOUS WORK LOOP (2:00–3:30)</h2>
+<p>[VISUAL] Animated diagram showing the cycle: Scan Issues → Triage → Spawn Agents → Collect Results → Open PR → Scan Again. Each step lights up as it's described.</p>
+<p>[NARRATION] Here's how the loop works. Step one: Ralph scans your GitHub issues. It looks for issues that have been tagged or that match routing rules defined in your <code>routing.md</code>. Step two: triage. Ralph reads the issue, understands what kind of work it is — is this a frontend task? A bug fix? An API endpoint? — and routes it to the right agent.</p>
+<p>[VISUAL] Show an issue titled &quot;Add dark mode toggle to settings page&quot; being auto-triaged.</p>
+<p>[NARRATION] Step three: Ralph spawns the agents. Not just one — if the task needs frontend AND backend work, Ralph launches both in parallel. They work independently but share decisions through the team's shared brain.</p>
+<p>[VISUAL] Show terminal output of multiple agents being spawned simultaneously.</p>
+<p>[NARRATION] Step four: collect results. As agents complete their work, Ralph gathers everything — the code changes, the decisions made, any blockers hit. Step five: Ralph creates a branch, commits the changes, and opens a pull request. Then it goes right back to step one.</p>
+<p>[VISUAL] Show a GitHub PR being opened automatically with a detailed description of what was done and why.</p>
+<p>[NARRATION] The beautiful thing? Each iteration feeds the next. The decisions made in one task inform the next task. The agents' history files grow. The team gets smarter with every loop.</p>
+<hr>
+<h2>ISSUE-TO-PR LIFECYCLE (3:30–5:00)</h2>
+<p>[VISUAL] Screen recording of a real GitHub issue being processed end-to-end.</p>
+<p>[NARRATION] Let me walk you through a real example. Here's a GitHub issue: &quot;Add user profile endpoint — GET /api/users/:id should return user profile data.&quot; Ralph picks this up on its next scan.</p>
+<p>[VISUAL] Show Ralph's log output:</p>
+<pre><code>🔍 Ralph scanning issues...
+📋 Found: #42 &quot;Add user profile endpoint&quot;
+🎯 Triage: Backend task → routing to Verbal
+🚀 Spawning Verbal with task context...
+</code></pre>
+<p>[NARRATION] Ralph identifies this as a backend task and routes it to Verbal — our backend specialist. Verbal reads the issue, checks the existing codebase for patterns — because remember, Verbal has history from previous sessions — and starts implementing.</p>
+<p>[VISUAL] Show code being written in the editor: route handler, model query, validation.</p>
+<p>[NARRATION] Verbal creates the route handler, adds input validation, writes the database query, and even adds error handling that matches the patterns it's seen in the rest of the codebase. Then it does something clever — it routes a sub-task to Fenster, the tester.</p>
+<p>[VISUAL] Show <code>squad_route</code> being called to hand off testing work.</p>
+<p>[NARRATION] Fenster writes the test suite. API tests for happy path, edge cases, authentication checks. All of this happens without any human involvement.</p>
+<p>[VISUAL] Show the completed PR with: branch <code>feature/user-profile-42</code>, commit history, test results, and PR description.</p>
+<p>[NARRATION] The result? A clean pull request. Feature branch named after the issue. Multiple commits showing the progression. Tests passing. PR description that explains what was done and links back to the original issue. All you have to do is review and merge.</p>
+<hr>
+<h2>RALPH'S STATE MANAGEMENT (5:00–5:45)</h2>
+<p>[VISUAL] Show <code>ralph-state.json</code> file contents.</p>
+<p>[NARRATION] Ralph is also resilient. It persists its state to <code>.squad/ralph-state.json</code>. If Ralph crashes — network hiccup, model timeout, whatever — it picks up exactly where it left off. It knows which issues it's already processed, which agents are mid-task, and what's pending review.</p>
+<p>[VISUAL] Show the event subscription code:</p>
+<pre><code class="language-typescript">ralph.subscribe('agent:task-complete', (event) =&gt; {
+  console.log(`✅ ${event.agentName} finished: ${event.task}`);
+});
+
+ralph.subscribe('agent:error', (event) =&gt; {
+  console.log(`❌ ${event.agentName} failed: ${event.error}`);
+});
+</code></pre>
+<p>[NARRATION] You can also subscribe to Ralph's events programmatically. Task completions, errors, triage decisions — everything is observable. This is great for setting up notifications or building dashboards that show what your AI team is working on.</p>
+<hr>
+<h2>SETTING UP RALPH IN YOUR PROJECT (5:45–6:45)</h2>
+<p>[VISUAL] Step-by-step terminal walkthrough.</p>
+<p>[NARRATION] Setting this up is surprisingly straightforward. First, make sure you're authenticated with GitHub CLI — <code>gh auth login</code>. Then initialize Squad if you haven't already — <code>squad init</code>. That gives you the team structure.</p>
+<p>[VISUAL] Show commands:</p>
+<pre><code class="language-bash">gh auth login
+squad init
+squad triage --interval 5
+</code></pre>
+<p>[NARRATION] Then just run <code>squad triage</code>. I like setting the interval to 5 minutes during active development. Ralph starts scanning, and from that point on, any properly labeled issue in your repo becomes a work item for your AI team.</p>
+<p>[VISUAL] Show the terminal with Ralph's first scan output, finding and triaging issues.</p>
+<p>[NARRATION] Pro tip: start with small, well-defined issues. &quot;Add a health check endpoint.&quot; &quot;Create a 404 page.&quot; Let your agents build up history and learn your codebase before throwing complex features at them. The knowledge compounds, and after a week of this, you'll be amazed at what Ralph can handle autonomously.</p>
+<hr>
+<h2>OUTRO &amp; CTA (6:45–7:15)</h2>
+<p>[VISUAL] Show a dashboard-style view of issues processed, PRs opened, and time saved.</p>
+<p>[NARRATION] Ralph is the closest thing I've seen to autonomous software development that actually works in practice. It's not AGI — it's a well-orchestrated team of specialists that get better the more they work on your project.</p>
+<p>[VISUAL] Show next video thumbnail: &quot;From Zero to 21 Games in 24 Hours&quot;</p>
+<p>[NARRATION] In the next video, I'm going to show you what happens when you take this to the extreme — an AI team that built 21 HTML5 games in 24 hours. We're talking 2D platformers, 3D shooters, puzzle games — all published to itch.io. It's the craziest experiment I've run with Squad yet. Subscribe and hit the bell so you don't miss it!</p>
+<p>[VISUAL] End card with subscribe button, Squad repo link, and next video thumbnail.</p>
+<hr>
+<h2>VIDEO METADATA</h2>
+<p><strong>Title:</strong> Ralph Never Sleeps: Building an Autonomous AI Work Pipeline
+<strong>Description:</strong> Meet Ralph — the AI work monitor that watches your GitHub issues and keeps your development team shipping code while you sleep. In this video, I show you how Squad's autonomous work pipeline scans for issues, triages them to specialized AI agents, collects results, and opens pull requests — all without human intervention.</p>
+<p>🔗 Squad on GitHub: https://github.com/bradygaster/squad
+📦 Install: npm install -g @bradygaster/squad-cli
+▶️ Previous video: &quot;I Let AI Agents Run My Entire Dev Team&quot;</p>
+<p><strong>Tags:</strong> ralph agent, autonomous coding, ai pipeline, github automation, squad framework, ai work monitor, continuous development, ai dev team, github copilot agents, autonomous software development</p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

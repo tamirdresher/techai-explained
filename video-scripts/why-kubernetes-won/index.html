@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Kubernetes Won (And What&#39;s Next) — TechAI Explained</title>
+  <meta name="description" content="A video script exploring how Kubernetes became the default infrastructure layer, what problems remain unsolved, and where container orchestration is headed in 2026.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 17, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>Why Kubernetes Won (And What&#39;s Next)</h1>
+    <p class="subtitle">A video script exploring how Kubernetes became the default infrastructure layer, what problems remain unsolved, and where container orchestration is headed in 2026.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 12 minutes</li>
+<li><strong>Format:</strong> Narrated explainer with diagrams, timeline graphics, and terminal demos</li>
+<li><strong>Audience:</strong> Backend developers and DevOps engineers who use K8s but want context on its trajectory</li>
+<li><strong>Thumbnail Concept:</strong> Kubernetes logo as a trophy with runner-up logos (Docker Swarm, Mesos, Nomad) faded behind it — text &quot;Why K8s WON&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:15)</h3>
+<p><strong>Hook (0:00 - 0:30)</strong></p>
+<blockquote>
+<p>&quot;In 2014, Kubernetes was a Google side project. By 2020, it ran most of the internet's infrastructure. Docker Swarm is effectively dead. Mesos was archived. Even Nomad, the best alternative, is a niche tool. How did Kubernetes win so completely? And more importantly — is it still the right choice for what's coming next?&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Timeline animation showing K8s market share growth vs. competitors declining.</p>
+<p><strong>Agenda (0:30 - 1:15)</strong></p>
+<blockquote>
+<p>&quot;In this video: The three factors that made Kubernetes win. The problems Kubernetes still hasn't solved. And the three technologies that might reshape container orchestration by 2028.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 1: Why Kubernetes Won (1:15 - 4:30)</h3>
+<h4>Factor 1: The API Model (1:15 - 2:30)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Kubernetes' killer feature isn't containers — it's the <strong>declarative API model</strong></li>
+<li>You describe desired state, the system reconciles to that state</li>
+<li>This model turned out to be the right abstraction for infrastructure</li>
+<li>Custom Resource Definitions (CRDs) let anyone extend the API</li>
+</ul>
+<blockquote>
+<p>&quot;Docker Swarm let you run containers. Kubernetes let you define your entire infrastructure as code and extend it infinitely. That's the difference between a tool and a platform.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Side-by-side comparison:</p>
+<ul>
+<li>Docker Swarm: <code>docker service create --replicas 3 nginx</code></li>
+<li>Kubernetes: Full YAML manifest with desired state, then show the reconciliation loop</li>
+</ul>
+<h4>Factor 2: Ecosystem Network Effects (2:30 - 3:30)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>CNCF created a neutral governance model (unlike Docker, Inc.)</li>
+<li>Every cloud provider invested in managed Kubernetes (AKS, EKS, GKE)</li>
+<li>Operators pattern created a marketplace of infrastructure automation</li>
+<li>Tooling ecosystem (Helm, Kustomize, ArgoCD, Flux) made K8s more useful than the competition</li>
+</ul>
+<blockquote>
+<p>&quot;Once AWS, Azure, and Google all offered managed Kubernetes, it was over. Companies didn't have to choose a cloud AND an orchestrator. Kubernetes was the orchestrator, on every cloud.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Logo cloud showing the CNCF ecosystem expanding year by year.</p>
+<h4>Factor 3: Extensibility Model (3:30 - 4:30)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>CRDs + Operators let K8s manage databases, message queues, ML pipelines — not just containers</li>
+<li>Examples: PostgreSQL Operator, Kafka Operator, Spark Operator, Kubeflow</li>
+<li>Kubernetes became the &quot;operating system&quot; for the data center</li>
+</ul>
+<blockquote>
+<p>&quot;The real genius was CRDs. Kubernetes went from 'container orchestrator' to 'anything orchestrator.' Want to manage PostgreSQL clusters? Write a CRD. Kafka? CRD. Your own custom infrastructure? CRD. That extensibility made it impossible to compete with.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show a CRD being applied and the operator creating/managing PostgreSQL instances automatically.</p>
+<hr>
+<h3>SECTION 2: What Kubernetes Still Gets Wrong (4:30 - 7:00)</h3>
+<h4>Problem 1: Complexity Tax (4:30 - 5:30)</h4>
+<blockquote>
+<p>&quot;Let's be honest — Kubernetes is absurdly complex for simple workloads. Running a three-container web app shouldn't require understanding Deployments, Services, Ingresses, ConfigMaps, Secrets, PersistentVolumeClaims, NetworkPolicies, and ServiceAccounts.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show the number of YAML lines required for a basic web app deployment (including service, ingress, secrets, etc.) — contrast with <code>docker compose up</code>.</p>
+<p><strong>Key stat:</strong> &quot;The average Kubernetes deployment involves 200+ lines of YAML for a single service.&quot;</p>
+<h4>Problem 2: Developer Experience (5:30 - 6:15)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Local development on K8s is painful (Minikube, Kind, k3d — all workarounds)</li>
+<li>Inner loop (write code → see results) is 10x slower than non-K8s development</li>
+<li>Tools like Tilt, Skaffold, and Telepresence help but add complexity</li>
+<li>Platform engineering teams exist primarily to hide K8s complexity from developers</li>
+</ul>
+<blockquote>
+<p>&quot;The fact that an entire discipline — platform engineering — exists largely to make Kubernetes usable by application developers tells you something about the developer experience problem.&quot;</p>
+</blockquote>
+<h4>Problem 3: Cost Optimization (6:15 - 7:00)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Kubernetes makes it easy to over-provision (just add more nodes!)</li>
+<li>Resource requests/limits are guessed by most teams</li>
+<li>Multi-tenancy is still hard</li>
+<li>FinOps for K8s is an entire industry</li>
+</ul>
+<blockquote>
+<p>&quot;I've seen teams running $50,000/month clusters where 60% of capacity was idle. Kubernetes makes it easy to scale up. It doesn't make it easy to right-size.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 3: What's Next (7:00 - 10:30)</h3>
+<h4>Trend 1: WebAssembly on the Edge (7:00 - 8:15)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Wasm components start in microseconds vs. seconds for containers</li>
+<li>SpinKube runs Wasm workloads on Kubernetes</li>
+<li>Fermyon, Fastly, Cloudflare Workers — Wasm at the edge</li>
+<li>Not replacing K8s, but complementing it for latency-sensitive workloads</li>
+</ul>
+<blockquote>
+<p>&quot;Containers are measured in seconds. WebAssembly components start in microseconds. For edge computing and serverless functions, Wasm isn't competing with Kubernetes — it's extending it to places containers can't go.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Startup time comparison: VM (minutes) → Container (seconds) → Wasm (microseconds)</p>
+<h4>Trend 2: AI Infrastructure Workloads (8:15 - 9:30)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>GPU scheduling on K8s is immature compared to CPU scheduling</li>
+<li>Projects like KubeRay, vLLM operator, and GPU partitioning are closing the gap</li>
+<li>AI training workloads need different scheduling semantics (gang scheduling, preemption)</li>
+<li>The infrastructure for AI is being built on K8s, but the abstractions aren't right yet</li>
+</ul>
+<blockquote>
+<p>&quot;Kubernetes was designed to schedule web servers. Scheduling GPU-intensive AI training jobs is a fundamentally different problem. Gang scheduling — where all pods must start together or none start at all — doesn't fit the K8s model neatly.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show GPU scheduling challenges: fragmentation, bin-packing problems, preemption cascades.</p>
+<h4>Trend 3: Platform-as-a-Product (9:30 - 10:30)</h4>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Internal Developer Platforms (IDPs) are the answer to K8s complexity</li>
+<li>Backstage, Port, Humanitec — tools to build golden paths</li>
+<li>The trend: hide K8s behind a simplified API tailored to your organization</li>
+<li>&quot;Kubernetes is the kernel; your platform is the operating system&quot;</li>
+</ul>
+<blockquote>
+<p>&quot;The future isn't less Kubernetes — it's better abstractions on top of Kubernetes. Your developers shouldn't need to know about pod anti-affinity rules. They should push code and it should deploy. That's what platform engineering delivers.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Layer diagram: Kubernetes → Platform API → Developer Portal → Developer</p>
+<hr>
+<h3>OUTRO (10:30 - 12:00)</h3>
+<p><strong>Summary (10:30 - 11:15)</strong></p>
+<blockquote>
+<p>&quot;Kubernetes won because of its API model, its ecosystem, and its extensibility. It struggles with complexity, developer experience, and cost optimization. The future adds WebAssembly for edge workloads, better GPU scheduling for AI, and platform engineering to hide the complexity.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;If you're starting a new project today, Kubernetes is still the right default for production workloads. But don't use it directly — build a platform on top of it, or use a managed platform that does.&quot;</p>
+</blockquote>
+<p><strong>CTA (11:15 - 11:30)</strong></p>
+<blockquote>
+<p>&quot;If this breakdown was useful, subscribe and hit the bell. Next week: a hands-on video where we set up autoscaling on Kubernetes from zero to production-ready.&quot;</p>
+</blockquote>
+<p><strong>End Screen (11:30 - 12:00):</strong> Two suggested video cards.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Terminal demos of kubectl, K8s dashboard screenshots, CNCF landscape page</li>
+<li><strong>Graphics:</strong> Timeline animations, market share charts, architecture diagrams</li>
+<li><strong>Music:</strong> Upbeat tech ambient, slightly faster pace than the AI agents video</li>
+<li><strong>Pacing:</strong> This video has more history/context — keep visuals changing every 5-10 seconds to maintain engagement</li>
+<li><strong>SEO Tags:</strong> Kubernetes, container orchestration, DevOps, platform engineering, WebAssembly, CNCF, cloud native</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<h1>ארכיטקטורת AI Agents — Tool Use ו-ReAct</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>מה הם AI Agents ואיך הם שונים מchatbots רגילים</li>
+<li>ארכיטקטורות agents: single agent, multi-agent, orchestration patterns</li>
+<li>בניית agents בטוחים ואמינים בproduction</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה זה AI Agent ומה הופך אותו ל&quot;agent&quot;?</h3>
+<p><strong>תשובה:</strong>
+AI Agent הוא מערכת שמשתמשת ב-LLM כ&quot;מוח&quot; לקבלת החלטות, יחד עם יכולת לבצע <strong>פעולות</strong> (actions) על העולם — לא רק לייצר טקסט.</p>
+<p><strong>מה מגדיר &quot;agent&quot;?</strong></p>
+<ol>
+<li><strong>Perception (תפיסה):</strong> קולט מידע מהסביבה — שאלת משתמש, תוצאות כלים, state נוכחי</li>
+<li><strong>Reasoning (חשיבה):</strong> LLM מחליט מה לעשות הבא</li>
+<li><strong>Action (פעולה):</strong> מבצע פעולה — קורא API, מריץ קוד, שולח אימייל, מחפש ב-web</li>
+<li><strong>Observation (תצפית):</strong> קולט תוצאה מהפעולה</li>
+<li><strong>Iteration:</strong> ממשיך ב-loop עד להשגת המטרה</li>
+</ol>
+<p><strong>ההבדל מ-LLM רגיל:</strong></p>
+<ul>
+<li>LLM רגיל: input → output (one-shot)</li>
+<li>Agent: goal → plan → execute → observe → plan again → ... → goal achieved</li>
+</ul>
+<p><strong>סוגי Agents:</strong></p>
+<ul>
+<li><strong>Tool-using agents:</strong> משתמש בכלים (search, calculator, code executor)</li>
+<li><strong>Planning agents:</strong> מחלק מטרות למשימות ומבצע בסדר</li>
+<li><strong>Multi-agent systems:</strong> מספר agents שמשתפים פעולה</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Agent = LLM + Memory + Tools + Planning</li>
+<li>Autonomy level משתנה: fully autonomous עד human-in-the-loop</li>
+<li>ה-loop הוא מה שמבדיל agent מchatbot</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה Tool Use ו-Function Calling?</h3>
+<p><strong>תשובה:</strong>
+Tool Use (נקרא גם Function Calling) מאפשר ל-LLM להחליט <strong>מתי ואיזה כלי</strong> לקרוא, לספק את הפרמטרים הנכונים, ולשלב את התוצאה בתשובה.</p>
+<p><strong>כיצד Function Calling עובד (OpenAI API):</strong></p>
+<ol>
+<li><strong>הגדרת tools:</strong> מספקים ל-LLM רשימת functions עם שם, תיאור וparameters</li>
+</ol>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;get_weather&quot;,
+  &quot;description&quot;: &quot;מחזיר תחזית מזג אוויר לעיר נתונה&quot;,
+  &quot;parameters&quot;: {
+    &quot;city&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;שם העיר&quot;}
+  }
+}
+</code></pre>
+<ol start="2">
+<li><strong>LLM מחליט:</strong> בהתאם לשאלה, ה-LLM מחזיר tool call request (לא תשובה ישירה):</li>
+</ol>
+<pre><code class="language-json">{&quot;name&quot;: &quot;get_weather&quot;, &quot;arguments&quot;: {&quot;city&quot;: &quot;Tel Aviv&quot;}}
+</code></pre>
+<ol start="3">
+<li>
+<p><strong>הApp מריץ:</strong> הקוד שלך מריץ את הfunction, מקבל תוצאה</p>
+</li>
+<li>
+<p><strong>LLM משלב:</strong> שולחים את התוצאה חזרה, ה-LLM מייצר תשובה סופית</p>
+</li>
+</ol>
+<p><strong>Parallel Tool Calling:</strong>
+LLMs מודרניים יכולים לקרוא מספר tools בו-זמנית. GPT-4 ו-Claude תומכים בזה.</p>
+<p><strong>Tool categories:</strong></p>
+<ul>
+<li><strong>Information tools:</strong> web search, database lookup, file read</li>
+<li><strong>Action tools:</strong> send email, create calendar event, post tweet</li>
+<li><strong>Compute tools:</strong> code execution, calculator, image generation</li>
+<li><strong>Communication tools:</strong> Slack message, API calls</li>
+</ul>
+<p><strong>Grounding Effect:</strong>
+Tool use מנמיך hallucinations — ה-LLM עובד עם נתונים אמיתיים ולא מ&quot;זיכרון&quot; שעשוי להיות שגוי.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Function calling = API structure ל-tool use</li>
+<li>תמיד validate tool outputs לפני שמשלבים בtשובה</li>
+<li>Tool descriptions חיוניות — LLM בוחר tool על בסיסן</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה ההבדל בין ארכיטקטורות Single Agent ל-Multi-Agent?</h3>
+<p><strong>תשובה:</strong>
+<strong>Single Agent:</strong>
+LLM אחד עם כלים מרובים ו-loop. פשוט יחסית.</p>
+<p>יתרונות: קל לdebug, פחות latency (אין communication בין agents), context מלא
+חסרונות: context window מוגבל; אחד agent לא יכול להתמחות בהכל; קשה לhuman oversight</p>
+<p>מתאים ל: tasks פשוטים עד בינוניים, use cases מוגדרים היטב</p>
+<p><strong>Multi-Agent System:</strong>
+מספר agents שמשתפים פעולה — כל agent מתמחה בdomain ספציפי.</p>
+<p><strong>דפוסי multi-agent:</strong></p>
+<ol>
+<li>
+<p><strong>Orchestrator + Sub-agents:</strong></p>
+<ul>
+<li>Orchestrator (מנהל) מפרק task למשימות קטנות</li>
+<li>Sub-agents מתמחים מבצעים כל משימה</li>
+<li>Orchestrator מאחד תוצאות</li>
+<li>דוגמה: Orchestrator → Research Agent + Writing Agent + Review Agent</li>
+</ul>
+</li>
+<li>
+<p><strong>Peer-to-Peer Collaboration:</strong></p>
+<ul>
+<li>Agents &quot;מדברים&quot; ישירות זה עם זה</li>
+<li>כל agent יכול לבקש עזרה מהאחרים</li>
+<li>מורכב יותר לניהול</li>
+</ul>
+</li>
+<li>
+<p><strong>Assembly Line:</strong></p>
+<ul>
+<li>Agent A → Agent B → Agent C (pipeline)</li>
+<li>פלט של אחד הוא input של השני</li>
+<li>ברור ומסודר, קשה להשתנות</li>
+</ul>
+</li>
+<li>
+<p><strong>Voting / Debate:</strong></p>
+<ul>
+<li>מספר agents נותנים תשובות</li>
+<li>מנגנון majority vote או debate לbest answer</li>
+<li>מגדיל accuracy אך יקר</li>
+</ul>
+</li>
+</ol>
+<p><strong>Frameworks מרכזיים:</strong></p>
+<ul>
+<li><strong>LangGraph:</strong> graph-based agent orchestration</li>
+<li><strong>AutoGen (Microsoft):</strong> multi-agent conversations</li>
+<li><strong>CrewAI:</strong> role-based multi-agent</li>
+<li><strong>OpenAI Swarm:</strong> lightweight multi-agent</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Start simple — single agent לפני multi-agent</li>
+<li>Multi-agent מוסיף complexity (debugging, latency, cost)</li>
+<li>Shared memory / state management הוא האתגר המרכזי</li>
+</ul>
+<hr>
+<h3>שאלה 4: כיצד מנהלים Memory ב-Agents?</h3>
+<p><strong>תשובה:</strong>
+Agents צריכים לזכור מידע בין פעולות ובין שיחות. יש ארבעה סוגי memory:</p>
+<p><strong>1. In-Context Memory (Working Memory):</strong>
+ה-context window הנוכחי. נגיש מיידית אך מוגבל בגודל וזמני (נאבד בסיום שיחה).
+ניהול: Summarization כאשר context ארוך מדי; sliding window; selective retention.</p>
+<p><strong>2. External Memory (Long-term Memory):</strong>
+מאגר ידע חיצוני שה-agent יכול לquery. בדרך כלל vector store.</p>
+<ul>
+<li>שמירת events חשובים, preferences, facts</li>
+<li>Retrieval לפי relevance לcontask הנוכחי</li>
+<li>כלים: Mem0, Zep, כל vector DB</li>
+</ul>
+<p><strong>3. Episodic Memory:</strong>
+זיכרון של &quot;מה עשיתי בעבר&quot; — history של actions ותוצאותיהם.
+שימושי ל: למידה מניסיון, אי-חזרה על טעויות</p>
+<p><strong>4. Semantic Memory:</strong>
+ידע כללי — facts, concepts. ה-LLM עצמו + knowledge base חיצוני.</p>
+<p><strong>Memory Management Strategies:</strong></p>
+<ul>
+<li><strong>Summarization:</strong> אחרי כל N הודעות, סכם את השיחה עד כה</li>
+<li><strong>Entity extraction:</strong> זיהוי וsaving ישויות חשובות (שמות, preferences)</li>
+<li><strong>Recency bias:</strong> ה-working memory שומר recent context; older מועבר ל-external</li>
+<li><strong>Forgetting:</strong> מחק מידע ישן / לא רלוונטי</li>
+</ul>
+<p><strong>Memory ב-Production:</strong></p>
+<ul>
+<li>Redis / PostgreSQL ל-session memory</li>
+<li>Vector DB (Pinecone, Weaviate) ל-long-term semantic memory</li>
+<li>ה-agent מחליט מה לשמור ומה לשכוח (meta-memory)</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>בלי memory, כל שיחה מתחילה מאפס — לא שימושי</li>
+<li>Long-term memory = persistent state בין sessions</li>
+<li>Memory retrieval = mini-RAG: חפש מה רלוונטי לcontask הנוכחי</li>
+</ul>
+<hr>
+<h3>שאלה 5: אילו בעיות יש ב-Agents ב-Production?</h3>
+<p><strong>תשובה:</strong>
+Agents ב-production מציגים אתגרים ייחודיים שלא קיימים בLLM רגיל:</p>
+<p><strong>1. Reliability ו-Determinism:</strong>
+Agents יכולים לקבל החלטות שונות ב-runs שונים. בproduction, זה עלול לגרום לתוצאות לא עקביות.
+פתרון: extensive logging, deterministic tools where possible, human checkpoints.</p>
+<p><strong>2. Infinite Loops:</strong>
+Agent שלא מוצא פתרון עלול להמשיך ב-loop.
+פתרון: max_iterations limit, timeout, fallback to human.</p>
+<p><strong>3. Tool Failures:</strong>
+כלים חיצוניים (APIs) נכשלים. איך ה-agent מגיב?
+פתרון: retry logic, error handling בprompt, fallback tools.</p>
+<p><strong>4. Cost Management:</strong>
+Agent loops = הרבה LLM calls = עלות גבוהה.
+פתרון: caching, cheaper models לsub-tasks, token budget tracking.</p>
+<p><strong>5. Safety ו-Guardrails:</strong>
+Agent שיכול לשלוח אימיילים, למחוק files, לבצע רכישות — מסוכן אם לא מאובטח.
+פתרון:</p>
+<ul>
+<li><strong>Human-in-the-loop:</strong> אישור אנושי לprioritized actions</li>
+<li><strong>Action whitelisting:</strong> רשימה מוגדרת של actions מורשות</li>
+<li><strong>Sandbox execution:</strong> קוד רץ בsandbox מבודד</li>
+<li><strong>Rate limiting:</strong> הגבלת פעולות בזמן נתון</li>
+</ul>
+<p><strong>6. Observability:</strong>
+קשה לדבג agent כשאין ראות מלאה על ה-reasoning path.
+פתרון: full logging של thought process, LangSmith, Phoenix, Langfuse.</p>
+<p><strong>7. Prompt Injection:</strong>
+אם ה-agent קורא תוכן מאינטרנט, משתמש זדוני יכול לשתול הוראות שמפנות ה-agent.
+פתרון: sanitize tool outputs, context isolation.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Production agents צריכים human oversight לhigh-stakes actions</li>
+<li>Observability (logging, tracing) חיוני לdebug</li>
+<li>&quot;Minimal footprint principle&quot; — agent צריך רק הרשאות שבאמת נחוץ</li>
+</ul>
+<h2>סיכום</h2>
+<p>AI Agents מייצגים את הגבול הבא של AI applications — מLLMs שעונים לLLMs שמבצעים. הבנת ארכיטקטורת agents, tool use, memory management ו-production challenges היא קריטית לכל מי שרוצה לבנות AI systems מתקדמים. בראיון, הראה שאתה מבין גם את היכולות וגם את המגבלות — especially לגבי safety ו-reliability.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>LangChain Agents Documentation</li>
+<li>AutoGen (Microsoft Research)</li>
+<li>Building Effective Agents — Anthropic Blog</li>
+<li>ReAct: Synergizing Reasoning and Acting</li>
+</ul>

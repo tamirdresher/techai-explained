@@ -1,0 +1,214 @@
+<h1>עיצוב מערכת: URL Shortener</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>כיצד לגשת לשאלת עיצוב מערכות מקצה לקצה בראיון</li>
+<li>עיצוב מלא של URL Shortener — שאלה קלאסית ונפוצה</li>
+<li>שיקולי scale, בחירת database, ושיקולי availability</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: כיצד תתחיל לגשת לשאלה &quot;עצב URL shortener&quot;?</h3>
+<p><strong>תשובה:</strong>
+שלב ראשון: <strong>הגדרת דרישות</strong> (לא להתחיל לתכנן לפני כן!)</p>
+<p><strong>דרישות פונקציונליות:</strong></p>
+<ul>
+<li>קבלת URL ארוך ויצירת קישור קצר ייחודי</li>
+<li>הפניה (redirect) מהקישור הקצר לארוך</li>
+<li>(אופציונלי) קישורים מותאמים אישית (custom aliases)</li>
+<li>(אופציונלי) תאריך תפוגה לקישורים</li>
+<li>(אופציונלי) analytics — כמה קליקים לכל קישור</li>
+</ul>
+<p><strong>דרישות לא-פונקציונליות:</strong></p>
+<ul>
+<li>המערכת צריכה לטפל ב-100M קישורים ביום</li>
+<li>Redirect latency נמוך מ-10ms</li>
+<li>High Availability — 99.9% uptime</li>
+<li>Durability — קישורים לא אובדים</li>
+</ul>
+<p><strong>אמידת Scale:</strong></p>
+<ul>
+<li>100M URLs ביום = ~1,200 writes לשנייה</li>
+<li>Read/Write ratio נפוץ: 100:1 → ~120,000 reads לשנייה (redirects)</li>
+<li>Storage: URL ממוצע = 200 bytes, 100M ביום × 365 ימים × 5 שנים = ~36TB</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>שאל שאלות ברורות לפני שמתחיל לתכנן</li>
+<li>אמוד scale בערכים בגסות — לא צריך דיוק מלא</li>
+<li>הגדר priorities: read-heavy? write-heavy? latency? consistency?</li>
+</ul>
+<hr>
+<h3>שאלה 2: כיצד יוצרים short code ייחודי?</h3>
+<p><strong>תשובה:</strong>
+ה-short code (כמו <code>bit.ly/abc123</code>) צריך להיות קצר, ייחודי וגנרבל מהר.</p>
+<p><strong>שיטה 1: Hash + Truncation</strong>
+לקחת MD5 או SHA-256 של ה-URL הארוך, ולקחת את 6-8 התווים הראשונים.</p>
+<ul>
+<li>MD5(&quot;https://example.com/very-long&quot;) → &quot;a7f3bc...&quot;</li>
+<li>Short code: &quot;a7f3bc&quot;</li>
+</ul>
+<p>בעיה: collision אפשרי (שני URLs שונים → אותו hash). פתרון: במקרה של collision, הוסף מספר נקוב ונסה שוב.</p>
+<p><strong>שיטה 2: Base62 Encoding על Auto-Increment ID</strong></p>
+<ul>
+<li>DB מייצר auto-increment ID: 12345</li>
+<li>מקודדים ל-Base62 (a-z, A-Z, 0-9): 12345 → &quot;3D7&quot;</li>
+<li>יתרון: אין collisions, קצר</li>
+<li>חסרון: IDs ניתנים לניחוש (predictable) — security concern</li>
+</ul>
+<p><strong>שיטה 3: Random Unique Identifier</strong></p>
+<ul>
+<li>גנרציה random של 6-8 תווים מ-Base62</li>
+<li>בדיקה שהקוד לא קיים כבר ב-DB</li>
+<li>יתרון: לא ניתן לניחוש</li>
+<li>חסרון: בדיקת uniqueness מול DB לכל כתיבה</li>
+</ul>
+<p><strong>שיטה מומלצת:</strong> Base62 על counter מרכזי + distributed ID generator (כמו Snowflake) לסקלאביליות.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>6 תווים ב-Base62 = 62^6 = ~56 מיליארד קומבינציות</li>
+<li>Hash approach פשוט אך דורש collision handling</li>
+<li>Distributed ID generation (Twitter Snowflake, Flickr Ticket Server) מאפשר scale</li>
+</ul>
+<hr>
+<h3>שאלה 3: איזה Database תבחר ולמה?</h3>
+<p><strong>תשובה:</strong>
+נבחן את האפשרויות לפי דרישות המערכת:</p>
+<p><strong>ניתוח דרישות:</strong></p>
+<ul>
+<li>Write: ~1,200/sec (כתיבת URLs)</li>
+<li>Read: ~120,000/sec (redirects)</li>
+<li>Data structure: key-value פשוט (short_code → long_url)</li>
+<li>Durability: כן, קישורים לא צריכים לאבד</li>
+<li>Consistency: eventual consistency מספיקה (אם redirect לוקח כמה שניות להיות זמין — בסדר)</li>
+</ul>
+<p><strong>אפשרויות:</strong></p>
+<ol>
+<li>
+<p><strong>SQL (PostgreSQL/MySQL):</strong></p>
+<ul>
+<li>יכול לעבוד, אך 120K reads/sec זה הרבה לשרת יחיד</li>
+<li>דורש sharding ו-read replicas</li>
+<li>מתאים אם צריך analytics מורכב</li>
+</ul>
+</li>
+<li>
+<p><strong>NoSQL Key-Value (DynamoDB, Cassandra):</strong></p>
+<ul>
+<li>מצוין ל-read-heavy workloads</li>
+<li>Scale אופקי קל</li>
+<li>DynamoDB: single-digit ms latency</li>
+<li>Cassandra: excellent write throughput</li>
+</ul>
+</li>
+<li>
+<p><strong>Redis (כ-Cache לפני DB):</strong></p>
+<ul>
+<li>Cache tier ל-hot links: short_code → long_url</li>
+<li>Expected cache hit rate: 80%+</li>
+<li>משלים DynamoDB/MySQL — לא מחליף</li>
+</ul>
+</li>
+</ol>
+<p><strong>ארכיטקטורה מומלצת:</strong>
+Redis cache (ל-hot links) → DynamoDB/Cassandra (primary storage)</p>
+<p>אם short code נמצא ב-Redis — redirect מיידי (&lt; 1ms). אם לא — שליפה מ-DB, cache ב-Redis, redirect.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Use case זה read-heavy, לכן cache קריטי</li>
+<li>NoSQL מועדף על SQL ל-simple key-value lookup בscale גדול</li>
+<li>אל תשכח לציין Redis cache כחלק מהארכיטקטורה</li>
+</ul>
+<hr>
+<h3>שאלה 4: כיצד מיישמים Redirect?</h3>
+<p><strong>תשובה:</strong>
+כאשר משתמש לוחץ על <code>bit.ly/abc123</code>, הדפדפן שולח HTTP GET request ל-<code>bit.ly/abc123</code>.</p>
+<p><strong>HTTP Redirect Codes:</strong></p>
+<ol>
+<li>
+<p><strong>301 Moved Permanently</strong> — מצביע שה-URL השתנה לצמיתות. הדפדפן מאחסן את ה-redirect ב-cache ולא שולח שוב לשרת שלך!</p>
+<ul>
+<li>יתרון: פחות עומס על שרת</li>
+<li>חסרון: לא ניתן לאסוף analytics קליקים (הדפדפן redirect בלי להגיע אלינו)</li>
+</ul>
+</li>
+<li>
+<p><strong>302 Found (Temporary Redirect)</strong> — הדפדפן לא מאחסן ב-cache, שולח בקשה לשרת בכל פעם.</p>
+<ul>
+<li>יתרון: ניתן לאסוף analytics, לשנות destination בעתיד</li>
+<li>חסרון: יותר load על שרת</li>
+</ul>
+</li>
+</ol>
+<p><strong>המלצה:</strong> אם analytics חשוב — 302. אם רוצים לחסוך load — 301.</p>
+<p><strong>Flow מלא:</strong></p>
+<ol>
+<li>User → GET bit.ly/abc123</li>
+<li>שרת בודק Redis cache</li>
+<li>אם miss → שולף מ-DynamoDB</li>
+<li>מעדכן cache (אם miss)</li>
+<li>מחזיר 302 redirect עם Location: https://original-url.com</li>
+<li>(Async) מעדכן analytics counter</li>
+</ol>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>301 vs 302 trade-off: performance vs analytics</li>
+<li>ה-redirect logic צריך להיות מהיר מאוד — זה ה-hot path</li>
+<li>לוגיקת analytics כדאי לעשות async כדי לא לפגוע ב-redirect latency</li>
+</ul>
+<hr>
+<h3>שאלה 5: כיצד תבנה את ה-Analytics?</h3>
+<p><strong>תשובה:</strong>
+Analytics ל-URL shortener כולל מעקב על: כמה קליקים, מאיזה browser/device, מאיזה גיאוגרפיה, לאורך זמן.</p>
+<p><strong>האתגר:</strong> ב-120K redirects/sec, לא ניתן לכתוב record ל-SQL DB בכל קליק.</p>
+<p><strong>ארכיטקטורת Analytics:</strong></p>
+<ol>
+<li>
+<p><strong>Async Event Streaming:</strong></p>
+<ul>
+<li>בכל redirect, שולחים event ל-Kafka: <code>{short_code, timestamp, user_agent, ip}</code></li>
+<li>Redirect ממשיך מיידית — לא מחכה לכתיבת ה-event</li>
+<li>Kafka consumers מעבדים events async</li>
+</ul>
+</li>
+<li>
+<p><strong>Consumer Processing:</strong></p>
+<ul>
+<li>Consumer קורא מ-Kafka</li>
+<li>מקבץ events (batching) לחיסכון בכתיבות</li>
+<li>כותב ל-analytics DB כל X שניות</li>
+</ul>
+</li>
+<li>
+<p><strong>Analytics Database:</strong></p>
+<ul>
+<li>ClickHouse, Apache Druid, BigQuery — column-store DBs מעולות ל-analytics</li>
+<li>אפשרות פשוטה יותר: Redis counters לstatistics בסיסיות (INCR)</li>
+</ul>
+</li>
+<li>
+<p><strong>Real-time Dashboard:</strong></p>
+<ul>
+<li>Redis sorted sets ל-trending links</li>
+<li>Aggregated stats ב-column-store ל-historical analysis</li>
+</ul>
+</li>
+</ol>
+<p><strong>API Analytics:</strong></p>
+<ul>
+<li><code>GET /api/stats/abc123</code> → מחזיר: total clicks, clicks per day, top countries, top browsers</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Analytics תמיד async — אל תפגע ב-redirect latency</li>
+<li>Kafka + column-store DB הוא pipeline נפוץ ל-click analytics</li>
+<li>Redis counters מתאימים ל-real-time simple stats</li>
+</ul>
+<h2>סיכום</h2>
+<p>URL Shortener הוא תרגיל קלאסי לראיון שמאחד הרבה נושאים: URL encoding, caching, database selection, redirect mechanics, ו-analytics. המפתח הוא גישה מובנית: קודם דרישות, אחר כך scale estimation, אז הארכיטקטורה, ואז צלילה לרכיבים ספציפיים. ארכיטקטורה טובה: Web servers → Redis cache → NoSQL DB לקריאות מהירות, Kafka → Analytics DB לאנליטיקה async.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>System Design Interview Vol. 1 — Alex Xu (Chapter: URL Shortener)</li>
+<li>ByteByteGo — URL Shortener Design</li>
+<li>bit.ly Engineering Blog</li>
+<li>TinyURL Technical Blog</li>
+</ul>

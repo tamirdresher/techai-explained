@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microservices Are Dead? What Actually Replaced Them — TechAI Explained</title>
+  <meta name="description" content="A video script examining the backlash against microservices, what went wrong, and the architectural patterns (modular monoliths, macroservices, platform engineering) that teams are actually adopting in 2026.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 13, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>Microservices Are Dead? What Actually Replaced Them</h1>
+    <p class="subtitle">A video script examining the backlash against microservices, what went wrong, and the architectural patterns (modular monoliths, macroservices, platform engineering) that teams are actually adopting in 2026.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 11 minutes</li>
+<li><strong>Format:</strong> Architecture diagrams + narrated analysis with real-world case studies</li>
+<li><strong>Audience:</strong> Senior engineers and architects who've lived through the microservices migration wave</li>
+<li><strong>Thumbnail Concept:</strong> Gravestone with &quot;Microservices&quot; written on it, but with a question mark — text &quot;What ACTUALLY Replaced Them?&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:15)</h3>
+<p><strong>Hook (0:00 - 0:30)</strong></p>
+<blockquote>
+<p>&quot;Amazon moved away from microservices. So did Shopify. Istio went back to a monolith. After a decade of 'microservices or die,' the industry is doing something unexpected — going back to bigger services. But it's not the same monolith we left. Let me explain what actually happened.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Timeline showing the microservices hype curve: 2014 (rise), 2018 (peak), 2022 (backlash begins), 2026 (new equilibrium).</p>
+<p><strong>Agenda (0:30 - 1:15)</strong></p>
+<blockquote>
+<p>&quot;We'll cover: why microservices failed for most teams. The three patterns that are replacing them. Real case studies — Amazon Prime Video, Shopify, Segment. And where microservices actually still make sense.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 1: What Went Wrong (1:15 - 3:30)</h3>
+<p><strong>The Promise vs. Reality (1:15 - 2:00)</strong></p>
+<blockquote>
+<p>&quot;Microservices promised independent deployment, technology flexibility, and team autonomy. What most teams actually got was distributed debugging, cascading failures, and a Kubernetes cluster that costs more than their revenue.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Promise vs. Reality table</p>
+<pre><code>PROMISED                    DELIVERED
+─────────                   ─────────
+Independent deployment  →   Coordinated releases (same as before)
+Team autonomy           →   Platform team bottleneck
+Better scaling          →   Over-provisioned infrastructure
+Technology flexibility  →   10 languages nobody can maintain
+Simple services         →   Simple code, complex infrastructure
+</code></pre>
+<p><strong>The Three Failure Modes (2:00 - 3:30)</strong></p>
+<p><strong>Failure 1: Distributed Monolith</strong></p>
+<blockquote>
+<p>&quot;The most common failure. Teams split the monolith into 20 services but kept shared databases, synchronous HTTP calls, and coordinated deployments. They got all the complexity of microservices with none of the benefits.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> 20 services with arrows between ALL of them — it looks like spaghetti.</p>
+<p><strong>Failure 2: Premature Decomposition</strong></p>
+<blockquote>
+<p>&quot;Startups with 5 engineers splitting their app into 15 services because Netflix does it. Netflix has 2,000 engineers. You have 5. The organizational overhead alone kills velocity.&quot;</p>
+</blockquote>
+<p><strong>Failure 3: Nano-Services</strong></p>
+<blockquote>
+<p>&quot;Services so small they have no meaningful domain. A 'UserNameValidator' service. A 'DateFormatter' service. These should be functions, not services.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 2: What's Replacing Microservices (3:30 - 8:00)</h3>
+<p><strong>Pattern 1: The Modular Monolith (3:30 - 5:00)</strong></p>
+<blockquote>
+<p>&quot;The hottest architecture of 2026 is... the monolith. But not the spaghetti monolith of 2010. The modular monolith.&quot;</p>
+</blockquote>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Single deployable artifact, but internally divided into strict modules</li>
+<li>Each module has its own domain, its own data access, and explicit public APIs</li>
+<li>Modules communicate through in-process events or well-defined interfaces</li>
+<li>Can be decomposed into services LATER if needed — the boundaries are already there</li>
+</ul>
+<p><strong>Visual:</strong></p>
+<pre><code>SPAGHETTI MONOLITH           MODULAR MONOLITH
+──────────────────           ────────────────
+
+Everything calls             Strict module boundaries
+everything.                  with explicit interfaces.
+No boundaries.               
+                             ┌────────────────────────┐
+┌────────────────┐           │ ┌──────┐ ┌──────────┐  │
+│ Tangled code   │           │ │Orders│→│ Catalog  │  │
+│ No clear       │           │ │module│ │ module   │  │
+│ ownership      │           │ └──────┘ └──────────┘  │
+│ Shared state   │           │ ┌──────┐ ┌──────────┐  │
+│ everywhere     │           │ │Users │ │ Payments │  │
+│                │           │ │module│ │ module   │  │
+└────────────────┘           │ └──────┘ └──────────┘  │
+                             └────────────────────────┘
+</code></pre>
+<p><strong>Quote from Shopify:</strong></p>
+<blockquote>
+<p>&quot;Shopify moved to a modular monolith and saw a 40% improvement in developer productivity. The key insight: you can have clean architecture without distributed systems complexity.&quot;</p>
+</blockquote>
+<p><strong>Pattern 2: Macroservices / Right-Sized Services (5:00 - 6:30)</strong></p>
+<blockquote>
+<p>&quot;For teams that DO need some service separation, the trend is bigger services — sometimes called macroservices. Instead of 50 microservices, you have 5-8 services, each owning a complete business domain.&quot;</p>
+</blockquote>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Each service maps to a business capability, not a technical function</li>
+<li>Services are large enough to have their own team (2-pizza rule)</li>
+<li>Services communicate asynchronously where possible</li>
+<li>The number of services should roughly match the number of teams</li>
+</ul>
+<p><strong>Visual:</strong></p>
+<pre><code>MICROSERVICES (50)           MACROSERVICES (5)
+──────────────────           ─────────────────
+
+user-service                 Identity Platform
+profile-service                (users, auth, profiles,
+auth-service                    SSO, permissions)
+permission-service           
+sso-service                  Commerce Engine
+───────────────                (orders, payments,
+order-service                   inventory, cart)
+payment-service              
+inventory-service            Content Platform
+cart-service                   (products, search,
+───────────────                 reviews, media)
+product-service              
+search-service               Fulfillment
+review-service                 (shipping, tracking,
+media-service                   returns, warehouse)
+───────────────              
+shipping-service             Analytics
+tracking-service               (reporting, ML,
+return-service                  recommendations)
+warehouse-service            
+───────────────              
+report-service               
+ml-service                   
+recommendation-service       
+</code></pre>
+<blockquote>
+<p>&quot;50 services need 50 CI/CD pipelines, 50 monitoring dashboards, and 50 on-call rotations. 5 services need 5. The math is not subtle.&quot;</p>
+</blockquote>
+<p><strong>Pattern 3: Platform Engineering (6:30 - 8:00)</strong></p>
+<blockquote>
+<p>&quot;The third pattern isn't an architecture — it's an operating model. Platform engineering teams build an internal developer platform that abstracts away infrastructure complexity.&quot;</p>
+</blockquote>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Developers don't choose between monolith and microservices — the platform handles deployment</li>
+<li>Golden paths: pre-configured templates for new services</li>
+<li>Self-service infrastructure: databases, queues, caches — all provisioned through a portal</li>
+<li>The platform team makes the architecture decisions so product teams don't have to</li>
+</ul>
+<blockquote>
+<p>&quot;The best teams in 2026 don't debate monolith vs. microservices. They use whatever the platform provides. The platform team already made that decision based on the organization's actual needs.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Developer Portal interface showing &quot;Create New Service&quot; with pre-configured options.</p>
+<hr>
+<h3>SECTION 3: When Microservices Still Win (8:00 - 9:30)</h3>
+<blockquote>
+<p>&quot;Microservices aren't dead. They're just not the default anymore. They still win in specific scenarios:&quot;</p>
+</blockquote>
+<ol>
+<li><strong>Massive organizations</strong> (500+ engineers) where team independence is critical</li>
+<li><strong>Wildly different scaling requirements</strong> — one service handles 100K req/s, another handles 10 req/day</li>
+<li><strong>Technology boundary requirements</strong> — ML inference in Python, API in Go, frontend in Node</li>
+<li><strong>Regulatory isolation</strong> — PCI-compliant payment service separated from the rest</li>
+<li><strong>Independent lifecycle services</strong> — a service that deploys 20 times a day next to one that deploys monthly</li>
+</ol>
+<p><strong>Decision framework:</strong></p>
+<pre><code>Fewer than 50 engineers?     → Modular monolith
+50-200 engineers?            → Macroservices (5-10 services)
+200+ engineers?              → Microservices might make sense
+Mixed technology needs?      → Extract just those boundaries
+Compliance requirements?     → Isolate regulated components
+</code></pre>
+<blockquote>
+<p>&quot;The right number of services is roughly equal to the number of teams you have. If you have 6 teams and 60 services, something has gone wrong.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 4: The New Equilibrium (9:30 - 10:30)</h3>
+<blockquote>
+<p>&quot;Here's where we've landed in 2026:&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Evolution timeline</p>
+<pre><code>2010: Monolith (everything in one app)
+2014: Microservices (split everything)
+2018: Peak microservices (split EVERYTHING)
+2022: Backlash (this is too complex)
+2026: Equilibrium:
+      - Start with modular monolith
+      - Extract services at team boundaries
+      - Never more services than teams
+      - Platform engineering handles infra
+</code></pre>
+<blockquote>
+<p>&quot;The industry spent a decade learning an expensive lesson: architectural complexity must be proportional to organizational complexity. A 10-person startup doesn't need the architecture of Netflix. And Netflix's architecture wouldn't work for a 10-person startup.&quot;</p>
+</blockquote>
+<p><strong>Key Takeaway:</strong></p>
+<blockquote>
+<p>&quot;The best architecture is the one your team can actually operate. A modular monolith that your team understands beats a microservices system that nobody can debug.&quot;</p>
+</blockquote>
+<hr>
+<h3>OUTRO (10:30 - 11:00)</h3>
+<blockquote>
+<p>&quot;Microservices aren't dead — they found their place. For most teams, that place is narrower than we thought. If this changed how you think about architecture, subscribe for more. Next week: how to build a modular monolith from scratch.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> Two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Architecture whiteboard drawings, conference talks (with attribution), Kubernetes dashboards</li>
+<li><strong>Case Studies:</strong> Reference Amazon Prime Video blog post, Shopify engineering blog, Segment's move back to monolith</li>
+<li><strong>Graphics:</strong> Evolution timeline, service count comparisons, team-to-service ratio charts</li>
+<li><strong>Music:</strong> Thoughtful, slower pace — this is a reflective video, not a hype video</li>
+<li><strong>Controversy angle:</strong> &quot;Microservices are dead&quot; is intentionally provocative — the video provides nuance</li>
+<li><strong>SEO Tags:</strong> microservices, modular monolith, software architecture, macroservices, platform engineering, distributed systems, monolith vs microservices</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

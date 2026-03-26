@@ -1,0 +1,190 @@
+<h1>RAG — Retrieval Augmented Generation</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>מה זה RAG ולמה הוא שינה את האופן שבו מפתחים עם LLMs</li>
+<li>כיצד Vector Databases ו-Embeddings עובדים</li>
+<li>שיקולי עיצוב RAG pipeline בעולם האמיתי</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה זה RAG ולמה זה חשוב?</h3>
+<p><strong>תשובה:</strong>
+RAG (Retrieval Augmented Generation) היא ארכיטקטורה שמחברת בין LLM לבין מאגר ידע חיצוני. במקום להסתמך רק על מה שה-LLM למד בזמן האימון, RAG מאפשר לו לחפש מידע רלוונטי ב-runtime ולכלול אותו ב-context לפני יצירת התשובה.</p>
+<p><strong>למה RAG?</strong></p>
+<ol>
+<li><strong>Knowledge Cutoff</strong> — LLMs לא יודעים על אירועים חדשים. RAG מאפשר גישה למידע עדכני</li>
+<li><strong>Hallucination</strong> — LLM ש&quot;לא יודע&quot; ממציא תשובות. עם RAG, הוא מסתמך על מסמכים אמיתיים</li>
+<li><strong>Domain Knowledge</strong> — שימוש במסמכים פנימיים של ארגון (docs, policies) ללא צורך ב-fine-tuning</li>
+<li><strong>Traceability</strong> — ניתן להצביע על המקורות שמהם הגיעה התשובה</li>
+<li><strong>Cost Efficiency</strong> — זול מ-fine-tuning, ניתן לעדכן מאגר ידע ללא אימון מחדש</li>
+</ol>
+<p><strong>ה-flow הבסיסי של RAG:</strong></p>
+<ol>
+<li>User שואל שאלה</li>
+<li>המערכת <strong>מחפשת</strong> (retrieves) מסמכים רלוונטיים מה-knowledge base</li>
+<li>מסמכים + שאלה מוזרמים ל-LLM כ-context</li>
+<li>LLM יוצר תשובה מבוססת על המסמכים</li>
+</ol>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>RAG = &quot;search + generate&quot; — לא יצירה מהזיכרון בלבד</li>
+<li>ניתן לעדכן מאגר ידע בזמן real-time ללא re-training</li>
+<li>חיוני לאפליקציות enterprise שצריכות מידע פנים-ארגוני</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה Embeddings ו-Vector Search?</h3>
+<p><strong>תשובה:</strong>
+<strong>Embeddings:</strong>
+ייצוג נומרי (וקטור) של טקסט ב-space רב-ממדי. מודלי embedding ממירים משפטים לוקטורים כך שמשפטים דומים סמנטית = וקטורים קרובים במרחב.</p>
+<p>דוגמה:</p>
+<ul>
+<li>&quot;חתול אוהב חלב&quot; → [0.23, -0.45, 0.87, ...]</li>
+<li>&quot;לחתולים טעים חלב&quot; → [0.24, -0.43, 0.85, ...] (קרוב!)</li>
+<li>&quot;המכונית נסעה מהר&quot; → [-0.15, 0.72, -0.34, ...] (רחוק)</li>
+</ul>
+<p><strong>Cosine Similarity:</strong> מודד קרבה בין וקטורים. ערך 1 = זהה, 0 = לא קשורים, -1 = מנוגדים.</p>
+<p>מודלי Embedding פופולריים: <code>text-embedding-ada-002</code> (OpenAI), <code>sentence-transformers</code> (HuggingFace), Cohere Embed.</p>
+<p><strong>Vector Search:</strong>
+לאחר שיוצרים embeddings לכל המסמכים ב-knowledge base:</p>
+<ol>
+<li>ממירים את השאלה ל-embedding</li>
+<li>מחפשים את ה-K המסמכים הקרובים ביותר (K-Nearest Neighbors)</li>
+<li>מחזירים את המסמכים הרלוונטיים ביותר</li>
+</ol>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Embeddings לוכדים משמעות סמנטית, לא רק keyword matching</li>
+<li>מממד גבוה (1536 לAda-002) מאפשר ייצוג עשיר</li>
+<li>Cosine similarity הנפוץ, אפשר גם Euclidean distance</li>
+</ul>
+<hr>
+<h3>שאלה 3: מהם Vector Databases ומה ההבדל ביניהם?</h3>
+<p><strong>תשובה:</strong>
+Vector Database הוא מסד נתונים ייעודי לאחסון וחיפוש וקטורים במהירות. תומך ב-ANN (Approximate Nearest Neighbors) חיפוש — קרוב מספיק, מהיר מספיק.</p>
+<p><strong>שחקנים עיקריים:</strong></p>
+<p><strong>1. Pinecone:</strong></p>
+<ul>
+<li>Managed, serverless vector DB</li>
+<li>קל להתחלה, managed service</li>
+<li>יקר יחסית</li>
+<li>מתאים: prototypes ו-production מהיר</li>
+</ul>
+<p><strong>2. Weaviate:</strong></p>
+<ul>
+<li>Open-source, multi-modal</li>
+<li>תומך ב-hybrid search (vector + BM25 keyword)</li>
+<li>גמיש, ניתן לself-host</li>
+<li>מתאים: production עם control מלא</li>
+</ul>
+<p><strong>3. Qdrant:</strong></p>
+<ul>
+<li>Open-source, Rust-based, מהיר מאוד</li>
+<li>תומך ב-filtering לפי metadata</li>
+<li>מתאים: high performance use cases</li>
+</ul>
+<p><strong>4. ChromaDB:</strong></p>
+<ul>
+<li>Lightweight, open-source</li>
+<li>מתאים ל-local development, prototypes</li>
+</ul>
+<p><strong>5. pgvector:</strong></p>
+<ul>
+<li>Extension ל-PostgreSQL</li>
+<li>לאלה שכבר עובדים עם Postgres ולא רוצים DB חדש</li>
+<li>פשוט אך לא מתאים לscale ענק</li>
+</ul>
+<p><strong>6. FAISS (Meta):</strong></p>
+<ul>
+<li>Library (לא DB) לחיפוש וקטורים יעיל</li>
+<li>מאוד מהיר, נפוץ ב-research</li>
+<li>לא כולל persistence, metadata, APIs</li>
+</ul>
+<p><strong>Hybrid Search:</strong>
+שילוב vector search (semantic) + BM25 keyword search. מחזיר תוצאות טובות יותר מכל שיטה לבדה.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>אין &quot;הטוב ביותר&quot; — תלוי ב-scale, budget, ו-infra preferences</li>
+<li>Hybrid search בדרך כלל עדיף על vector search בלבד</li>
+<li>pgvector מתאים כנקודת פתיחה אם כבר יש Postgres</li>
+</ul>
+<hr>
+<h3>שאלה 4: כיצד מעצבים RAG Pipeline בעולם האמיתי?</h3>
+<p><strong>תשובה:</strong>
+RAG pipeline מלא כולל כמה שלבים שכל אחד דורש תשומת לב:</p>
+<p><strong>שלב 1 — Ingestion Pipeline (טעינת נתונים):</strong></p>
+<ol>
+<li><strong>Loading:</strong> קריאת מסמכים (PDF, Word, HTML, code)</li>
+<li><strong>Chunking:</strong> פיצול מסמכים לcunks קטנים. חשוב: chunk גדול מדי → context מיותר; קטן מדי → אובדן context
+<ul>
+<li>Chunking strategies: fixed-size, sentence-based, semantic chunking</li>
+</ul>
+</li>
+<li><strong>Embedding:</strong> כל chunk → embedding vector</li>
+<li><strong>Storing:</strong> שמירה ב-vector DB עם metadata (source, date, section)</li>
+</ol>
+<p><strong>שלב 2 — Query Pipeline (מענה לשאלות):</strong></p>
+<ol>
+<li><strong>Query Understanding:</strong> לעתים יש לנסח מחדש את השאלה (query rewriting, HyDE)</li>
+<li><strong>Retrieval:</strong> K-NN search ב-vector DB</li>
+<li><strong>Re-ranking:</strong> דירוג חוזר של תוצאות (Cross-Encoder לדיוק גבוה יותר)</li>
+<li><strong>Context Building:</strong> בניית prompt עם השאלה + המסמכים הרלוונטיים</li>
+<li><strong>Generation:</strong> LLM מייצר תשובה</li>
+</ol>
+<p><strong>אתגרים נפוצים:</strong></p>
+<ul>
+<li><strong>Chunking strategy</strong> — הפיצול משפיע מאוד על איכות הretrieval</li>
+<li><strong>Retrieval quality</strong> — מה אם המסמך הנכון לא נמצא? (recall)</li>
+<li><strong>Context window</strong> — מה עושים עם 20 מסמכים רלוונטיים?</li>
+<li><strong>Citation</strong> — כיצד להצביע על מקורות ספציפיים?</li>
+</ul>
+<p><strong>Advanced RAG Techniques:</strong></p>
+<ul>
+<li><strong>HyDE (Hypothetical Document Embeddings):</strong> מייצרים מסמך היפותטי מהשאלה לפני החיפוש</li>
+<li><strong>Multi-query Retrieval:</strong> מייצרים גרסאות מרובות של השאלה לשיפור recall</li>
+<li><strong>RAPTOR/Hierarchical RAG:</strong> עץ סיכומים לtexts ארוכים</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Chunking strategy היא אחת ההחלטות החשובות ביותר ב-RAG</li>
+<li>Evaluation קריטי: RAGAS framework מודד faithfulness, relevance, context recall</li>
+<li>Naive RAG ≠ Production RAG — פרוד דורש re-ranking, hybrid search, evaluation</li>
+</ul>
+<hr>
+<h3>שאלה 5: מה ה-tradeoffs בין RAG ל-Fine-tuning?</h3>
+<p><strong>תשובה:</strong>
+שתי גישות לhsתאמת LLM לdomain ספציפי — לכל אחת יתרונות וחסרונות:</p>
+<p><strong>RAG:</strong></p>
+<ul>
+<li><strong>יתרונות:</strong> ניתן לעדכן מידע ב-real-time; מקורות traceable; אין צורך ב-GPU לאימון; ניתן להתחיל מהר</li>
+<li><strong>חסרונות:</strong> latency גבוה יותר (retrieval + generation); תלוי באיכות הretrieval; מורכבות תשתית</li>
+<li><strong>מתאים ל:</strong> מידע שמשתנה תדיר, knowledge-intensive tasks, צורך ב-citations</li>
+</ul>
+<p><strong>Fine-tuning:</strong></p>
+<ul>
+<li><strong>יתרונות:</strong> המודל לומד style ו-format; לא צריך retrieval בruntime; latency נמוך יותר</li>
+<li><strong>חסרונות:</strong> יקר (GPU time); קשה לעדכן מידע; hallucinations עדיין אפשריות; דורש נתוני אימון איכותיים</li>
+<li><strong>מתאים ל:</strong> learning style/format ספציפי, tasks שדורשים format output מסוים</li>
+</ul>
+<p><strong>בפועל — שילוב (RAG + Fine-tuning):</strong></p>
+<ul>
+<li>Fine-tune ל-style, tone, ו-format</li>
+<li>RAG ל-factual knowledge עדכני</li>
+<li>תוצאה: מודל שמדבר ב-tone הנכון ויודע עובדות עדכניות</li>
+</ul>
+<p><strong>Prompt Engineering ראשון:</strong>
+לפני RAG ו-Fine-tuning — נסה prompt engineering. לעתים prompt טוב מספיק ואין צורך ב-infrastructure נוסף.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>RAG ≠ Fine-tuning — משלימים, לא מתחרים</li>
+<li>RAG עדיף לfactual updates; Fine-tuning לstyle adaptation</li>
+<li>תמיד התחל עם prompt engineering לפני ש-invest ב-RAG או Fine-tuning</li>
+</ul>
+<h2>סיכום</h2>
+<p>RAG שינה את אופן בניית אפליקציות AI — במקום להסתמך על ידע &quot;קפוא&quot; של LLM, ניתן לחבר אותו למידע חי ועדכני. הבנת embeddings, vector search, ו-RAG pipeline design הפכו לכישורי ליבה לכל ML engineer שעובד עם LLMs. בראיון, הראה שאתה מבין לא רק מה RAG עושה, אלא גם את ה-tradeoffs ואת האתגרים ב-production.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>LangChain Documentation</li>
+<li>LlamaIndex Documentation</li>
+<li>RAGAS — RAG Evaluation Framework</li>
+<li>Andrej Karpathy — State of GPT (YouTube)</li>
+</ul>

@@ -1,0 +1,160 @@
+<h1>שיעור 9: Sorting Algorithms — Merge Sort, Quick Sort ומה שביניהם</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>&quot;מה הסיבוכיות של Merge Sort?&quot; — שאלת ראיון קלאסית.<br>
+אבל המראיין גם יכול לשאל: &quot;מה stable sort?&quot; או &quot;מתי Quick Sort גרוע מ-O(n log n)?&quot;.</p>
+<hr>
+<h2>Merge Sort — Divide &amp; Conquer</h2>
+<pre><code class="language-csharp">void MergeSort(int[] arr, int left, int right)
+{
+    if (left &gt;= right) return;
+    
+    int mid = left + (right - left) / 2;
+    MergeSort(arr, left, mid);
+    MergeSort(arr, mid + 1, right);
+    Merge(arr, left, mid, right);
+}
+
+void Merge(int[] arr, int left, int mid, int right)
+{
+    var temp = new int[right - left + 1];
+    int i = left, j = mid + 1, k = 0;
+    
+    while (i &lt;= mid &amp;&amp; j &lt;= right)
+    {
+        if (arr[i] &lt;= arr[j]) temp[k++] = arr[i++];
+        else                  temp[k++] = arr[j++];
+    }
+    while (i &lt;= mid)  temp[k++] = arr[i++];
+    while (j &lt;= right) temp[k++] = arr[j++];
+    
+    Array.Copy(temp, 0, arr, left, temp.Length);
+}
+// O(n log n) תמיד, O(n) space, STABLE
+</code></pre>
+<hr>
+<h2>Quick Sort — הכי מהיר בפועל</h2>
+<pre><code class="language-csharp">void QuickSort(int[] arr, int left, int right)
+{
+    if (left &gt;= right) return;
+    
+    int pivotIdx = Partition(arr, left, right);
+    QuickSort(arr, left, pivotIdx - 1);
+    QuickSort(arr, pivotIdx + 1, right);
+}
+
+int Partition(int[] arr, int left, int right)
+{
+    int pivot = arr[right]; // pivot אחרון
+    int i = left - 1;
+    
+    for (int j = left; j &lt; right; j++)
+    {
+        if (arr[j] &lt;= pivot)
+        {
+            i++;
+            (arr[i], arr[j]) = (arr[j], arr[i]);
+        }
+    }
+    (arr[i + 1], arr[right]) = (arr[right], arr[i + 1]);
+    return i + 1;
+}
+// O(n log n) ממוצע, O(n²) worst case, O(1) extra space, NOT stable
+</code></pre>
+<hr>
+<h2>Counting Sort — O(n) לטווח ידוע</h2>
+<pre><code class="language-csharp">int[] CountingSort(int[] arr, int max)
+{
+    var count = new int[max + 1];
+    foreach (int x in arr) count[x]++;
+    
+    var result = new int[arr.Length];
+    int idx = 0;
+    for (int i = 0; i &lt;= max; i++)
+        while (count[i]-- &gt; 0)
+            result[idx++] = i;
+    
+    return result; // O(n + k), k = range
+}
+</code></pre>
+<hr>
+<h2>השוואת Sorting Algorithms</h2>
+<table>
+<thead>
+<tr>
+<th>אלגוריתם</th>
+<th>Best</th>
+<th>Average</th>
+<th>Worst</th>
+<th>Space</th>
+<th>Stable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bubble</td>
+<td>O(n)</td>
+<td>O(n²)</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Merge</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Quick</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n²)</td>
+<td>O(log n)</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Heap</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(1)</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Counting</td>
+<td>O(n+k)</td>
+<td>O(n+k)</td>
+<td>O(n+k)</td>
+<td>O(k)</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה הוא Stable Sort?&quot;</h3>
+<p><strong>תשובה:</strong> אלגוריתם שמשמר את הסדר היחסי של אלמנטים שווים. Merge Sort הוא stable, Quick Sort הוא לא.</p>
+<h3>שאלה 2: &quot;מתי Quick Sort גרוע?&quot;</h3>
+<p><strong>תשובה:</strong> כשה-pivot תמיד גרוע (ה-minimum או ה-maximum). קורה על מערך ממוין אם תמיד בוחרים ה-pivot האחרון. פתרון: Random pivot.</p>
+<h3>שאלה 3: &quot;למה Array.Sort ב-C# משתמש ב-IntroSort?&quot;</h3>
+<p><strong>תשובה:</strong> IntroSort מתחיל עם Quick Sort אבל עובר ל-Heap Sort אם רמת הרקורסיה גבוהה מדי. מבטיח O(n log n) worst case.</p>
+<hr>
+<h2>סיכום</h2>
+<p>השתמשו ב-<strong>Merge Sort</strong> כשצריך:</p>
+<ul>
+<li>Stable sort מובטח</li>
+<li>Linked lists</li>
+<li>External sorting (קבצים גדולים)</li>
+</ul>
+<p>השתמשו ב-<strong>Quick Sort</strong> כשצריך:</p>
+<ul>
+<li>In-place sorting מהיר בממוצע</li>
+<li>Arrays (cache-friendly)</li>
+<li>Random data</li>
+</ul>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 9 מתוך 10</em></p>

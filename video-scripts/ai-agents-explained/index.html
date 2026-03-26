@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agents Explained in 10 Minutes — TechAI Explained</title>
+  <meta name="description" content="A complete video script covering what AI agents are, how they work, and the four architecture patterns powering production AI systems.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 18, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>AI Agents Explained in 10 Minutes</h1>
+    <p class="subtitle">A complete video script covering what AI agents are, how they work, and the four architecture patterns powering production AI systems.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 10 minutes</li>
+<li><strong>Format:</strong> Animated explainer with code overlays</li>
+<li><strong>Audience:</strong> Developers familiar with LLMs but new to agent architectures</li>
+<li><strong>Thumbnail Concept:</strong> Brain icon connected to multiple tool icons (database, API, file system) with text &quot;AI AGENTS — How They Actually Work&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:00)</h3>
+<p><strong>Hook (0:00 - 0:20)</strong></p>
+<blockquote>
+<p>&quot;Every tech company is shipping AI agents. But most developers can't explain what makes an agent different from a chatbot. In the next 10 minutes, you'll understand the four architecture patterns behind every production AI agent — and you'll know which one to pick for your next project.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Fast montage of agent UIs — Copilot, Cursor, Devin, custom dashboards — then transition to a clean architecture diagram.</p>
+<p><strong>Agenda (0:20 - 1:00)</strong></p>
+<blockquote>
+<p>&quot;We'll cover: What an agent actually is. The ReAct loop — the simplest pattern. Plan-and-Execute for complex tasks. Multi-agent orchestration for production systems. And Reflexion — self-correcting agents. Let's go.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Numbered list appearing as each item is mentioned.</p>
+<hr>
+<h3>SECTION 1: What Is an AI Agent? (1:00 - 2:30)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>A chatbot responds once. An agent loops until the job is done.</li>
+<li>Three properties: autonomy, tool use, memory.</li>
+<li>The core loop: Observe → Think → Act → Observe (repeat).</li>
+</ul>
+<p><strong>Visual:</strong> Animated loop diagram. Show a chatbot (single arrow: question → answer) vs. an agent (loop with multiple tool calls).</p>
+<p><strong>Code Overlay:</strong></p>
+<pre><code class="language-python">while not task_complete:
+    observation = observe(environment)
+    thought = llm.think(observation)
+    result = execute_tool(thought.action)
+</code></pre>
+<p><strong>Transition:</strong></p>
+<blockquote>
+<p>&quot;Now that you know what an agent is, let's look at the four patterns for building one — starting with the simplest.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 2: Pattern 1 — ReAct Loop (2:30 - 4:00)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>ReAct = Reasoning + Acting</li>
+<li>Model alternates between thinking and doing</li>
+<li>Simplest pattern, great for prototyping</li>
+<li>Limitations: purely reactive, no planning ahead</li>
+</ul>
+<p><strong>Visual:</strong> Step-by-step animation showing:</p>
+<ol>
+<li>User gives task</li>
+<li>LLM reasons about what to do</li>
+<li>LLM calls a tool</li>
+<li>Tool returns result</li>
+<li>LLM reasons again with new info</li>
+<li>Repeat until done</li>
+</ol>
+<p><strong>Code Overlay:</strong> Show simplified ReAct agent class (5-10 lines).</p>
+<p><strong>Example Walkthrough:</strong></p>
+<blockquote>
+<p>&quot;Let's say you ask: 'Find all Python files with SQL injection vulnerabilities.' The agent thinks: 'I need to search for Python files first.' It calls grep. Gets results. Thinks: 'Now I need to check each file for unsanitized SQL.' Reads each file. Analyzes. Reports findings.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 3: Pattern 2 — Plan-and-Execute (4:00 - 5:30)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Separates planning from execution</li>
+<li>Planner creates full plan upfront</li>
+<li>Executor works through each step</li>
+<li>User can review plan before execution starts</li>
+</ul>
+<p><strong>Visual:</strong> Two-phase diagram. Phase 1: Planner produces numbered steps. Phase 2: Executor processes each step sequentially with tool calls.</p>
+<p><strong>Comparison Visual:</strong> Side-by-side ReAct (no plan, step-by-step) vs Plan-and-Execute (plan first, then execute).</p>
+<blockquote>
+<p>&quot;Think of ReAct as GPS recalculating every turn. Plan-and-Execute is like studying the map before you drive. Both get you there — but the planner is more predictable.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 4: Pattern 3 — Multi-Agent (5:30 - 7:30)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Multiple specialized agents, each with their own tools and system prompts</li>
+<li>Router/Orchestrator decides which agent handles what</li>
+<li>Real-world example: Code review with Security Agent, Logic Agent, Style Agent</li>
+</ul>
+<p><strong>Visual:</strong> Organization chart style diagram. Orchestrator at top, specialist agents below. Show a task being routed to the right agent.</p>
+<p><strong>Demo Walkthrough:</strong></p>
+<blockquote>
+<p>&quot;Here's how a real code review system works. A PR comes in. The orchestrator sends it to three agents in parallel. The Security Agent checks for vulnerabilities. The Logic Agent looks for bugs. The Style Agent enforces conventions. Their feedback is merged into a single review.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show the three agents processing simultaneously, then their outputs merging into a unified review.</p>
+<p><strong>Key Insight:</strong></p>
+<blockquote>
+<p>&quot;The power here is specialization. Each agent has a focused system prompt, focused tools, and focused evaluation criteria. A generalist agent trying to do all three would perform worse at each.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 5: Pattern 4 — Reflexion (7:30 - 9:00)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Agent produces output, then critiques its own work</li>
+<li>Self-evaluation loop with configurable iteration count</li>
+<li>Best for high-stakes outputs where quality matters</li>
+<li>Trade-off: higher token cost for higher quality</li>
+</ul>
+<p><strong>Visual:</strong> Loop diagram with Actor → Output → Critic → Feedback → Actor (improved output). Show quality score increasing with each iteration.</p>
+<p><strong>Example:</strong></p>
+<blockquote>
+<p>&quot;Generate a database migration. First attempt: it works but doesn't handle the rollback case. The critic catches this. Second attempt: adds rollback, but misses an index. Critic catches again. Third attempt: complete, tested, production-ready.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 6: Choosing the Right Pattern (9:00 - 9:30)</h3>
+<p><strong>Visual:</strong> Decision tree animation:</p>
+<ul>
+<li>Simple task, single domain → <strong>ReAct</strong></li>
+<li>Complex task, need predictability → <strong>Plan-and-Execute</strong></li>
+<li>Multiple domains, specialized knowledge → <strong>Multi-Agent</strong></li>
+<li>Quality-critical output → <strong>Reflexion</strong></li>
+</ul>
+<blockquote>
+<p>&quot;Start with ReAct. Graduate when your use case demands it. And remember: the pattern matters less than the guardrails around it.&quot;</p>
+</blockquote>
+<hr>
+<h3>OUTRO (9:30 - 10:00)</h3>
+<blockquote>
+<p>&quot;Those are the four patterns behind every production AI agent. If this was helpful, subscribe for more deep dives. Next week: we're building a multi-agent code review system from scratch. See you then.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Subscribe animation + next video preview card.</p>
+<p><strong>End Screen:</strong> 15 seconds with two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll Ideas:</strong> Screen recordings of Copilot, terminal agent sessions, architecture diagram animations</li>
+<li><strong>Music:</strong> Lo-fi tech ambient, low volume under narration</li>
+<li><strong>Transitions:</strong> Clean cuts between sections, no flashy effects</li>
+<li><strong>Captions:</strong> Auto-generated, manually reviewed for accuracy</li>
+<li><strong>SEO Tags:</strong> AI agents, agent architecture, ReAct, multi-agent, LLM agents, AI engineering</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

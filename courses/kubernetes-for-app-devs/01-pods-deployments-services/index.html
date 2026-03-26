@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 1: Pods, Deployments, Services — The Core Three — TechAI Explained</title>
+  <meta name="description" content="The three Kubernetes resources every developer must understand — how Pods run your containers, Deployments manage replicas, and Services route traffic.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Kubernetes Course</span>
+      <time>March 8, 2026</time>
+      <span class="read-time">15 min read</span>
+    </div>
+    <h1>Lesson 1: Pods, Deployments, Services — The Core Three</h1>
+    <p class="subtitle">The three Kubernetes resources every developer must understand — how Pods run your containers, Deployments manage replicas, and Services route traffic.</p>
+  </header>
+  <div class="article-body">
+    <p>Every Kubernetes application uses three core resources: <strong>Pods</strong>, <strong>Deployments</strong>, and <strong>Services</strong>. A Pod runs your container. A Deployment manages your Pods. A Service routes traffic to your Pods. Understand these three, and you understand 80% of what matters for deploying applications.</p>
+<h2>Pods: Where Your Code Runs</h2>
+<p>A Pod is the smallest deployable unit in Kubernetes. It wraps one or more containers that share the same network and storage.</p>
+<h3>Your First Pod</h3>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: my-api
+  labels:
+    app: my-api
+spec:
+  containers:
+    - name: api
+      image: my-registry/my-api:1.0.0
+      ports:
+        - containerPort: 8080
+</code></pre>
+<p>Apply it:</p>
+<pre><code class="language-bash">kubectl apply -f pod.yaml
+kubectl get pods
+kubectl logs my-api
+kubectl describe pod my-api
+</code></pre>
+<h3>What's Inside a Pod</h3>
+<div class="diagram-box">
+┌────────────────────────────────────────────────┐
+│                     POD                        │
+│                                                │
+│  ┌──────────────────┐  ┌───────────────────┐   │
+│  │  Container: api  │  │ Container: sidecar│   │
+│  │                  │  │ (optional)        │   │
+│  │  Your app code   │  │ Logging, proxy,   │   │
+│  │  Port 8080       │  │ service mesh      │   │
+│  └──────────────────┘  └───────────────────┘   │
+│                                                │
+│  Shared: Network (localhost), Storage (volumes)│
+│  Unique: Pod IP (cluster-internal)             │
+└────────────────────────────────────────────────┘
+</div>
+<p>Key facts about Pods:</p>
+<ul>
+<li>Each Pod gets its own <strong>IP address</strong> (internal to the cluster)</li>
+<li>Containers in the same Pod share <code>localhost</code></li>
+<li>Pods are <strong>ephemeral</strong> — Kubernetes can kill and replace them at any time</li>
+<li>You almost <strong>never create Pods directly</strong> — you use Deployments instead</li>
+</ul>
+<h2>Deployments: Managing Your Pods</h2>
+<p>A Deployment tells Kubernetes: &quot;I want N replicas of this Pod running at all times.&quot; If a Pod crashes, the Deployment creates a new one. If you update the image, the Deployment rolls out the new version gradually.</p>
+<h3>Your First Deployment</h3>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-api
+  template:
+    metadata:
+      labels:
+        app: my-api
+    spec:
+      containers:
+        - name: api
+          image: my-registry/my-api:1.0.0
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+</code></pre>
+<h3>How Deployments Work</h3>
+<div class="diagram-box">
+DEPLOYMENT: my-api (replicas: 3)
+│
+├── Pod: my-api-7d4f8b6c5-abc12   [Running] ✅
+├── Pod: my-api-7d4f8b6c5-def34   [Running] ✅
+└── Pod: my-api-7d4f8b6c5-ghi56   [Running] ✅
+<p>What happens when a Pod crashes:
+Pod: my-api-7d4f8b6c5-abc12   [CrashLoopBackOff] ❌
+→ Deployment creates: my-api-7d4f8b6c5-jkl78 ✅
+→ Back to 3/3 ✅</p>
+</div>
+<h3>Rolling Updates</h3>
+<p>When you change the image, Pods update gradually with zero downtime:</p>
+<pre><code class="language-bash">kubectl set image deployment/my-api api=my-registry/my-api:2.0.0
+kubectl rollout status deployment/my-api
+kubectl rollout undo deployment/my-api    # Roll back if needed
+</code></pre>
+<div class="diagram-box">
+ROLLING UPDATE: v1 → v2
+<p>Step 1:  v1 ✅  v1 ✅  v1 ✅  v2 🔄 (starting)
+Step 2:  v1 ✅  v1 ✅  v2 ✅  (v1 terminating)
+Step 3:  v1 ✅  v2 ✅  v2 🔄 (starting)
+Step 4:  v2 ✅  v2 ✅  v2 ✅  — Zero downtime!</p>
+</div>
+<h2>Services: Routing Traffic to Your Pods</h2>
+<p>Pods have IP addresses, but those IPs change every time a Pod is recreated. <strong>Services</strong> provide a stable network endpoint.</p>
+<h3>Your First Service</h3>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: my-api
+spec:
+  selector:
+    app: my-api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+</code></pre>
+<h3>How Services Work</h3>
+<div class="diagram-box">
+SERVICE: my-api (ClusterIP: 10.96.45.12)
+│
+│  Stable DNS: my-api.default.svc.cluster.local
+│
+│  Request ──► Service ──┬──► Pod A (10.244.1.5)
+│                        ├──► Pod B (10.244.2.3)
+│                        └──► Pod C (10.244.1.8)
+│
+│  Pod IPs change. Service IP stays the same.
+│  Other services connect to: http://my-api:80
+</div>
+<h3>Service Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Access</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClusterIP</code></td>
+<td>Internal only</td>
+<td>Service-to-service</td>
+</tr>
+<tr>
+<td><code>NodePort</code></td>
+<td>Via NodeIP:Port</td>
+<td>Dev/testing</td>
+</tr>
+<tr>
+<td><code>LoadBalancer</code></td>
+<td>External LB</td>
+<td>Production traffic</td>
+</tr>
+</tbody>
+</table>
+<h3>Service Discovery</h3>
+<p>Kubernetes has built-in DNS. Every Service gets a name:</p>
+<pre><code class="language-typescript">// Just use the service name in your code
+const response = await fetch('http://my-api:80/api/orders');
+</code></pre>
+<h2>Putting It All Together</h2>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-api
+  template:
+    metadata:
+      labels:
+        app: my-api
+    spec:
+      containers:
+        - name: api
+          image: my-registry/my-api:1.2.0
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-api
+spec:
+  selector:
+    app: my-api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+</code></pre>
+<h2>Common Debugging Commands</h2>
+<pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt;       # Events and status
+kubectl logs &lt;pod-name&gt;               # App logs
+kubectl logs &lt;pod-name&gt; --previous    # Crashed container logs
+kubectl rollout status deployment/X   # Deployment progress
+kubectl get endpoints my-api          # Service target Pods
+kubectl exec -it &lt;pod-name&gt; -- sh     # Shell into a Pod
+</code></pre>
+<h2>Key Takeaways</h2>
+<ol>
+<li><strong>Pods</strong> run containers but are ephemeral — never create them directly</li>
+<li><strong>Deployments</strong> manage Pods with self-healing, scaling, and rolling updates</li>
+<li><strong>Services</strong> provide stable networking — use service names, not Pod IPs</li>
+<li><strong>Labels</strong> connect everything — Deployments and Services find Pods by labels</li>
+<li>Always set <strong>resource requests/limits</strong> for production</li>
+</ol>
+<p>Next: <a href="/courses/kubernetes-for-app-devs/02-configmaps-secrets-environment/">Lesson 2 — ConfigMaps, Secrets, and Environment Management →</a></p>
+<p><em>Part of the Kubernetes for Application Developers course by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

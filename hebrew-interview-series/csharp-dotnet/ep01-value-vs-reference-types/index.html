@@ -1,0 +1,212 @@
+<h1>שיעור 1: Value Types vs Reference Types — שאלה נפוצה בראיונות</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>אחת השאלות הקלאסיות ביותר בראיונות C# היא: &quot;מה ההבדל בין Value Type ל-Reference Type?&quot;<br>
+נשמע פשוט, נכון? אבל רוב המועמדים נתקעים בדקות הדקות — ועוד יותר נתקעים כשהמראיין שואל שאלת המשך.<br>
+בשיעור הזה נפרק את הנושא לגמרי ונוודא שאתם לא רק יודעים לענות, אלא מבינים לעומק.</p>
+<hr>
+<h2>מהם Value Types?</h2>
+<p><strong>Value Types</strong> הם טיפוסים שמאחסנים את הערך שלהם <strong>ישירות בזיכרון</strong> — בדרך כלל ב-Stack.<br>
+כשאתם מקצים Value Type למשתנה חדש, נוצרת <strong>עותק</strong> (copy) של הערך.</p>
+<p>הטיפוסים הנפוצים ביותר:</p>
+<ul>
+<li><code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, <code>decimal</code></li>
+<li><code>bool</code>, <code>char</code></li>
+<li><code>struct</code></li>
+<li><code>enum</code></li>
+</ul>
+<pre><code class="language-csharp">int a = 5;
+int b = a;   // b הוא עותק של a
+b = 10;
+
+Console.WriteLine(a); // 5 — לא השתנה!
+Console.WriteLine(b); // 10
+</code></pre>
+<p>כאן <code>b</code> קיבל <strong>עותק</strong> של הערך של <code>a</code>. שינוי <code>b</code> לא משפיע על <code>a</code>.</p>
+<hr>
+<h2>מהם Reference Types?</h2>
+<p><strong>Reference Types</strong> לא מאחסנים את הנתונים עצמם, אלא <strong>כתובת</strong> (reference/pointer) למקום בזיכרון ה-Heap שבו הנתונים נמצאים.<br>
+כשאתם מקצים Reference Type למשתנה חדש, שניהם מצביעים <strong>לאותו אובייקט</strong>.</p>
+<p>הטיפוסים הנפוצים ביותר:</p>
+<ul>
+<li><code>class</code></li>
+<li><code>string</code> (מקרה מיוחד — נדון בזה)</li>
+<li><code>array</code></li>
+<li><code>interface</code></li>
+<li><code>delegate</code></li>
+</ul>
+<pre><code class="language-csharp">class Person
+{
+    public string Name { get; set; }
+}
+
+Person p1 = new Person { Name = &quot;Alice&quot; };
+Person p2 = p1;   // p2 מצביע לאותו אובייקט!
+p2.Name = &quot;Bob&quot;;
+
+Console.WriteLine(p1.Name); // &quot;Bob&quot; — השתנה!
+Console.WriteLine(p2.Name); // &quot;Bob&quot;
+</code></pre>
+<p>כאן <code>p1</code> ו-<code>p2</code> מצביעים <strong>לאותו אובייקט בזיכרון</strong>. שינוי דרך <code>p2</code> משפיע גם על <code>p1</code>.</p>
+<hr>
+<h2>Stack vs Heap — ההבדל בזיכרון</h2>
+<table>
+<thead>
+<tr>
+<th>מאפיין</th>
+<th>Stack</th>
+<th>Heap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>מהירות</td>
+<td>מהיר מאוד</td>
+<td>איטי יותר</td>
+</tr>
+<tr>
+<td>ניהול</td>
+<td>אוטומטי (LIFO)</td>
+<td>Garbage Collector</td>
+</tr>
+<tr>
+<td>גודל</td>
+<td>מוגבל</td>
+<td>גדול יותר</td>
+</tr>
+<tr>
+<td>שימוש</td>
+<td>Value Types, local variables</td>
+<td>Reference Types, אובייקטים</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>המקרה המיוחד של string</h2>
+<p><code>string</code> הוא Reference Type — אבל הוא <strong>immutable</strong> (לא ניתן לשינוי).<br>
+לכן הוא מתנהג <strong>כמו</strong> Value Type כשאתם עובדים איתו:</p>
+<pre><code class="language-csharp">string s1 = &quot;Hello&quot;;
+string s2 = s1;
+s2 = &quot;World&quot;;
+
+Console.WriteLine(s1); // &quot;Hello&quot; — לא השתנה!
+Console.WriteLine(s2); // &quot;World&quot;
+</code></pre>
+<p>למה? כי <code>s2 = &quot;World&quot;</code> יוצר <strong>אובייקט חדש</strong> בזיכרון ומצביע אליו — לא משנה את <code>s1</code>.</p>
+<hr>
+<h2>struct vs class — ההבדל המעשי</h2>
+<pre><code class="language-csharp">// struct = Value Type
+struct Point
+{
+    public int X, Y;
+}
+
+// class = Reference Type
+class PointClass
+{
+    public int X, Y;
+}
+
+Point p1 = new Point { X = 1, Y = 2 };
+Point p2 = p1;
+p2.X = 99;
+Console.WriteLine(p1.X); // 1 — עותק!
+
+PointClass pc1 = new PointClass { X = 1, Y = 2 };
+PointClass pc2 = pc1;
+pc2.X = 99;
+Console.WriteLine(pc1.X); // 99 — reference!
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה יקרה כאן?&quot;</h3>
+<pre><code class="language-csharp">int x = 10;
+Modify(x);
+Console.WriteLine(x); // ?
+
+void Modify(int val)
+{
+    val = 999;
+}
+</code></pre>
+<p><strong>תשובה נכונה:</strong> יודפס <code>10</code>. הפרמטר הועבר <strong>by value</strong> — נוצר עותק.</p>
+<hr>
+<h3>שאלה 2: &quot;ואם נשתמש ב-ref?&quot;</h3>
+<pre><code class="language-csharp">int x = 10;
+Modify(ref x);
+Console.WriteLine(x); // ?
+
+void Modify(ref int val)
+{
+    val = 999;
+}
+</code></pre>
+<p><strong>תשובה נכונה:</strong> יודפס <code>999</code>. המילה <code>ref</code> מעבירה <strong>reference</strong> לערך, גם עבור Value Types.</p>
+<hr>
+<h3>שאלה 3: &quot;למה להשתמש ב-struct במקום class?&quot;</h3>
+<p><strong>תשובה טובה:</strong></p>
+<ul>
+<li>כשהאובייקט קטן (עד ~16 בייטים)</li>
+<li>כשהוא immutable</li>
+<li>כשנוצרים הרבה instances (כדי להפחית לחץ על ה-GC)</li>
+<li>דוגמאות: <code>Vector2</code>, <code>Color</code>, <code>DateTime</code></li>
+</ul>
+<hr>
+<h2>מלכודות נפוצות בראיון</h2>
+<h3>מלכודת 1: &quot;string הוא Value Type&quot;</h3>
+<p>❌ <strong>שגוי.</strong> <code>string</code> הוא Reference Type אבל immutable.<br>
+אל תאמרו &quot;string הוא Value Type&quot; — זו תשובה שמסגירה פער בהבנה.</p>
+<h3>מלכודת 2: &quot;Value Types תמיד ב-Stack&quot;</h3>
+<p>❌ <strong>לא תמיד נכון.</strong> אם Value Type הוא שדה של class, הוא יהיה <strong>ב-Heap</strong> יחד עם האובייקט.</p>
+<pre><code class="language-csharp">class Container
+{
+    public int Value; // int הוא ב-Heap כאן, לא ב-Stack!
+}
+</code></pre>
+<h3>מלכודת 3: &quot;copying is always cheap&quot;</h3>
+<p>❌ נכון ל-int וכדומה, אבל struct גדול יכול להיות יקר להעתקה.</p>
+<hr>
+<h2>טיפים לראיון</h2>
+<ol>
+<li><strong>הסבירו Stack vs Heap</strong> — מראיינים אוהבים לשמוע שאתם מבינים מה קורה בזיכרון</li>
+<li><strong>ציינו את ה-immutability של string</strong> — זה מראה הבנה עמוקה</li>
+<li><strong>הביאו דוגמה עם <code>ref</code> ו-<code>out</code></strong> — מראה שאתם יודעים את הניואנסים</li>
+<li><strong>ציינו GC</strong> — ציינו שה-Heap מנוהל על ידי Garbage Collector</li>
+</ol>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Value Type</th>
+<th>Reference Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>אחסון</td>
+<td>Stack (בדרך כלל)</td>
+<td>Heap</td>
+</tr>
+<tr>
+<td>עותק</td>
+<td>עותק מלא</td>
+<td>עותק reference</td>
+</tr>
+<tr>
+<td>דוגמאות</td>
+<td>int, struct, enum</td>
+<td>class, string, array</td>
+</tr>
+<tr>
+<td>GC</td>
+<td>לא</td>
+<td>כן</td>
+</tr>
+</tbody>
+</table>
+<p>הבנה מעמיקה של Value vs Reference Types מראה שאתם מבינים איך C# עובד <strong>מתחת למכסה המנוע</strong> — וזה בדיוק מה שמראיינים רוצים לראות.</p>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 1 מתוך 10</em></p>

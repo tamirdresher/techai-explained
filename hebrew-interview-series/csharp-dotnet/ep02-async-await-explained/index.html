@@ -1,0 +1,200 @@
+<h1>שיעור 2: async/await ו-Task — הבנה מעמיקה לראיון</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p><code>async</code> ו-<code>await</code> הן אולי התכונות הנפוצות ביותר ב-C# המודרנית — ואחת הנושאים שהכי הרבה מועמדים מסבירים <strong>לא נכון</strong> בראיון.<br>
+&quot;async זה multi-threading&quot; — שמעתם את זה? זו אחת הטעויות הנפוצות ביותר.<br>
+בשיעור הזה נבין בדיוק מה קורה כשאנחנו כותבים <code>await</code>.</p>
+<hr>
+<h2>הבעיה שאותה async/await פותרת</h2>
+<p>לפני <code>async/await</code>, קוד אסינכרוני נכתב עם callbacks, שגרם לתופעה המפורסמת &quot;callback hell&quot;:</p>
+<pre><code class="language-csharp">// קוד סינכרוני — חוסם Thread
+var data = File.ReadAllText(&quot;bigfile.txt&quot;); // Thread ממתין!
+Process(data);
+</code></pre>
+<p>כשה-Thread ממתין לקלט/פלט (I/O), הוא <strong>חסום</strong> — אינו יכול לשרת בקשות אחרות.<br>
+<code>async/await</code> מאפשר ל-Thread להמשיך לעבוד בזמן שהממשק חוזר.</p>
+<hr>
+<h2>async/await בפעולה</h2>
+<pre><code class="language-csharp">// קוד אסינכרוני — Thread אינו חסום
+public async Task&lt;string&gt; ReadFileAsync(string path)
+{
+    string data = await File.ReadAllTextAsync(path);
+    return data.ToUpper();
+}
+</code></pre>
+<p>מה קורה כאן?</p>
+<ol>
+<li>הפונקציה מתחילה לרוץ על ה-Thread הנוכחי</li>
+<li>כשהיא מגיעה ל-<code>await</code>, ה-Thread <strong>שוחרר</strong> ויכול לטפל בבקשות אחרות</li>
+<li>כשהקריאה ל-I/O סיימה, הקוד שאחרי ה-<code>await</code> ממשיך — לא בהכרח על אותו Thread</li>
+</ol>
+<hr>
+<h2>Task vs Task&lt;T&gt;</h2>
+<pre><code class="language-csharp">// Task — מחזיר void (ללא ערך)
+public async Task DoWorkAsync()
+{
+    await Task.Delay(1000);
+    Console.WriteLine(&quot;Done!&quot;);
+}
+
+// Task&lt;T&gt; — מחזיר ערך
+public async Task&lt;int&gt; GetCountAsync()
+{
+    await Task.Delay(1000);
+    return 42;
+}
+
+// שימוש
+int count = await GetCountAsync();
+</code></pre>
+<hr>
+<h2>async void — מתי וכמה לא להשתמש</h2>
+<pre><code class="language-csharp">// ❌ BAD — Exception תחמוק!
+public async void BadMethod()
+{
+    await Task.Delay(1000);
+    throw new Exception(&quot;Lost exception!&quot;);
+}
+
+// ✅ GOOD — Exception ניתן לטיפול
+public async Task GoodMethod()
+{
+    await Task.Delay(1000);
+    throw new Exception(&quot;Caught exception!&quot;);
+}
+</code></pre>
+<p><code>async void</code> מיועד <strong>רק</strong> לאירועים (event handlers). בכל מקרה אחר — תמיד <code>async Task</code>.</p>
+<hr>
+<h2>Deadlock — המלכודת הנפוצה ביותר</h2>
+<p>זהו אחד הנושאים הכי נשאלים בראיון:</p>
+<pre><code class="language-csharp">// ❌ Deadlock! — אל תעשו את זה ב-ASP.NET
+public string GetResult()
+{
+    return GetResultAsync().Result; // חוסם ומחכה
+}
+
+public async Task&lt;string&gt; GetResultAsync()
+{
+    await Task.Delay(1000); // מנסה לחזור ל-SynchronizationContext
+    return &quot;Done&quot;;
+}
+</code></pre>
+<p><strong>למה זה Deadlock?</strong><br>
+ב-ASP.NET הישן וב-UI threads, יש <code>SynchronizationContext</code>.<br>
+כש-<code>GetResult()</code> קורא ל-<code>.Result</code>, הוא חוסם את ה-Thread הנוכחי.<br>
+<code>await</code> מנסה לחזור לאותו Thread (SynchronizationContext) — אבל הוא חסום.<br>
+<strong>תוצאה:</strong> Deadlock.</p>
+<p><strong>הפתרון הנכון:</strong></p>
+<pre><code class="language-csharp">// ✅ Option 1: async all the way
+public async Task&lt;string&gt; GetResultAsync()
+{
+    return await GetResultInternalAsync();
+}
+
+// ✅ Option 2: ConfigureAwait(false) — ב-Libraries
+public async Task&lt;string&gt; LibraryMethodAsync()
+{
+    await Task.Delay(1000).ConfigureAwait(false); // לא חוזר ל-SynchronizationContext
+    return &quot;Done&quot;;
+}
+</code></pre>
+<hr>
+<h2>ValueTask — האופטימיזציה המתקדמת</h2>
+<pre><code class="language-csharp">// Task — תמיד יוצר allocation ב-Heap
+public async Task&lt;int&gt; GetCachedValue()
+{
+    if (_cache != null)
+        return _cache; // עדיין יוצר Task object!
+    
+    return await FetchFromDb();
+}
+
+// ValueTask — ללא allocation כשיש ערך מיידי
+public async ValueTask&lt;int&gt; GetCachedValueOptimized()
+{
+    if (_cache != null)
+        return _cache; // ללא allocation!
+    
+    return await FetchFromDb();
+}
+</code></pre>
+<hr>
+<h2>WhenAll ו-WhenAny</h2>
+<pre><code class="language-csharp">// ריצה מקבילית של מספר tasks
+var task1 = FetchUserAsync(1);
+var task2 = FetchUserAsync(2);
+var task3 = FetchUserAsync(3);
+
+// המתנה לכולם
+var users = await Task.WhenAll(task1, task2, task3);
+
+// המתנה לראשון שמסיים
+var firstResult = await Task.WhenAny(task1, task2, task3);
+</code></pre>
+<hr>
+<h2>CancellationToken — תמיד תעבירו אותו</h2>
+<pre><code class="language-csharp">public async Task&lt;string&gt; FetchDataAsync(CancellationToken cancellationToken = default)
+{
+    using var client = new HttpClient();
+    
+    // העברת token לכל קריאה אסינכרונית
+    var response = await client.GetAsync(&quot;https://api.example.com&quot;, cancellationToken);
+    return await response.Content.ReadAsStringAsync(cancellationToken);
+}
+
+// ביטול לאחר 5 שניות
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+var data = await FetchDataAsync(cts.Token);
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;האם async/await יוצר Threads חדשים?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> לא בהכרח. <code>async/await</code> הוא מנגנון לניהול <strong>המשכיות קוד</strong> (continuation), לא ליצירת Threads. עבור I/O-bound operations, לא נוצר Thread חדש — ה-Thread הקיים שוחרר.</p>
+<h3>שאלה 2: &quot;מה ההבדל בין Task.Run לבין await?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li><code>Task.Run</code> — מריץ קוד על Thread Pool Thread (לעבודה CPU-bound)</li>
+<li><code>await</code> — ממתין לסיום Task, משחרר ה-Thread הנוכחי</li>
+</ul>
+<h3>שאלה 3: &quot;מתי להשתמש ב-ConfigureAwait(false)?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> ב-libraries ו-backend code שאינם צריכים לחזור ל-UI thread — לשיפור ביצועים ומניעת deadlocks.</p>
+<hr>
+<h2>מלכודות נפוצות בראיון</h2>
+<p>❌ &quot;async זה multi-threading&quot; — לא נכון. async הוא concurrency, לא parallelism.<br>
+❌ &quot;async void זה בסדר&quot; — רק לאירועים!<br>
+❌ &quot;.Result ו-.Wait() הם בסדר&quot; — גורמים לדדלוקים.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>מונח</th>
+<th>הסבר</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>async</code></td>
+<td>מסמן שהמתודה אסינכרונית</td>
+</tr>
+<tr>
+<td><code>await</code></td>
+<td>ממתין ל-Task, משחרר ה-Thread</td>
+</tr>
+<tr>
+<td><code>Task</code></td>
+<td>מייצג פעולה אסינכרונית</td>
+</tr>
+<tr>
+<td><code>CancellationToken</code></td>
+<td>מאפשר ביטול פעולות</td>
+</tr>
+<tr>
+<td>Deadlock</td>
+<td>חסימה הדדית — <code>.Result</code> + <code>SynchronizationContext</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 2 מתוך 10</em></p>

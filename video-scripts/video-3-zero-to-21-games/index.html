@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> — TechAI Explained</title>
+  <meta name="description" content="Complex tech. Simple explanations. Tutorials on AI, DevOps, and modern software engineering.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Tutorial</span>
+      <time>Invalid Date</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1></h1>
+    <p class="subtitle"></p>
+  </header>
+  <div class="article-body">
+    <h1>Video 3: &quot;From Zero to 21 Games in 24 Hours with AI Agent Teams&quot;</h1>
+<p><strong>Channel:</strong> TechAI Explained
+<strong>Duration:</strong> 10–12 minutes
+<strong>Style:</strong> Case study with gameplay footage, terminal recordings, and data visualizations</p>
+<hr>
+<h2>INTRO (0:00–1:00)</h2>
+<p>[VISUAL] Rapid montage of HTML5 games running in browsers — a platformer, a space shooter, a puzzle game, a 3D racing game. Numbers counting up: 1, 5, 10, 15, 21. Clock showing 24 hours passing.</p>
+<p>[NARRATION] Twenty-one games. Twenty-four hours. Zero human-written lines of code. This is the story of how I used Squad — the AI agent team framework — to build an entire game studio's worth of HTML5 games in a single day. 2D platformers, puzzle games, tower defense, even 3D games with Three.js. All published live on itch.io. And the wild part? It didn't stop at games. The same agent team generated articles, video scripts, and course content for every single one. This is the JellyBolt Games experiment, and I'm about to break down exactly how it worked.</p>
+<hr>
+<h2>THE SETUP (1:00–2:30)</h2>
+<p>[VISUAL] Show a clean project directory. Terminal: <code>squad init</code>. The <code>.squad/</code> folder appearing.</p>
+<p>[NARRATION] The setup was simple. I created a monorepo with a <code>games/</code> directory and initialized Squad. But here's where it gets interesting — I didn't use the default team configuration. I customized the team specifically for game development.</p>
+<p>[VISUAL] Show customized <code>team.md</code> with game-specific roles:</p>
+<pre><code>## Team Roster
+- Lead (Keaton) — Game Design &amp; Architecture
+- Frontend (McManus) — HTML5/Canvas/Three.js Implementation
+- Backend (Verbal) — Game Logic &amp; State Management
+- Tester (Fenster) — QA &amp; Gameplay Testing
+- Scribe (Kobayashi) — Documentation &amp; Publishing
+</code></pre>
+<p>[NARRATION] Keaton became the game designer — defining mechanics, level structure, and player experience. McManus handled the actual HTML5 implementation — Canvas for 2D, Three.js for 3D. Verbal managed game logic and state. Fenster became QA, testing for bugs, checking frame rates, validating controls. And Kobayashi handled documentation and itch.io publishing metadata.</p>
+<p>[VISUAL] Show <code>routing.md</code> with game-specific routing rules.</p>
+<p>[NARRATION] I set up the routing so that when I said &quot;build a platformer,&quot; the coordinator knew exactly how to distribute the work. Game design to Keaton. Rendering to McManus. Physics and collision to Verbal. Playtest checklist to Fenster.</p>
+<hr>
+<h2>THE PARALLEL DEVELOPMENT STRATEGY (2:30–4:00)</h2>
+<p>[VISUAL] Animated timeline showing multiple games being developed simultaneously, with colored bars for each agent.</p>
+<p>[NARRATION] Here's the key insight that made 21 games possible: parallel development. I didn't build games one at a time. I batched them.</p>
+<p>[VISUAL] Show the terminal with multiple agent spawns:</p>
+<pre><code>Batch 1: Games 1-3
+🎮 Keaton — designing &quot;Neon Runner&quot; (platformer)
+🎮 McManus — implementing &quot;Neon Runner&quot; canvas engine
+🎮 Keaton — designing &quot;Star Drift&quot; (space shooter)
+🎮 McManus — implementing &quot;Star Drift&quot; particle system
+🎮 Keaton — designing &quot;Block Logic&quot; (puzzle game)
+</code></pre>
+<p>[NARRATION] I'd kick off a batch of three games at once. Keaton would design all three in parallel — defining game mechanics, controls, scoring systems. Then McManus would implement each one while Keaton moved on to designing the next batch. Verbal would wire up game state management, Fenster would test completed games, and Kobayashi would write the itch.io descriptions and README files.</p>
+<p>[VISUAL] Show a Gantt-chart-style visualization of the 24-hour period with games progressing through stages.</p>
+<p>[NARRATION] It was like a production pipeline. While games 4 through 6 were being implemented, games 1 through 3 were being tested. While games 7 through 9 were being designed, games 4 through 6 were getting polish. Every agent was always busy.</p>
+<hr>
+<h2>THE GAMES (4:00–6:30)</h2>
+<p>[VISUAL] Quick showcase of games with gameplay footage. 3-4 seconds each, with game title and type overlaid.</p>
+<p>[NARRATION] Let me show you what came out of this. We had 2D games built with HTML5 Canvas — platformers with pixel art, space shooters with particle effects, puzzle games with drag-and-drop mechanics. Simple but functional and genuinely fun to play.</p>
+<p>[VISUAL] Show a platformer game running. Character jumping, collecting items, avoiding obstacles.</p>
+<p>[NARRATION] &quot;Neon Runner&quot; was a side-scrolling platformer with procedurally generated levels. McManus implemented smooth pixel movement, gravity physics, and collision detection all in vanilla Canvas. No game engine.</p>
+<p>[VISUAL] Show a 3D game running. Camera rotating around a scene.</p>
+<p>[NARRATION] Then we leveled up to 3D. Using Three.js, the team built racing games, a first-person maze explorer, and a 3D tower defense game. These were more complex — Verbal had to handle 3D collision detection, camera systems, and 3D asset generation using procedural geometry.</p>
+<p>[VISUAL] Show a puzzle game. Colorful blocks being matched and cleared.</p>
+<p>[NARRATION] The puzzle games were probably the most polished — &quot;Chromatic&quot; was a color-matching game with satisfying animations, combo scoring, and progressive difficulty. Clean code, smooth gameplay, responsive controls.</p>
+<p>[VISUAL] Quick montage of all 21 game titles with thumbnails.</p>
+<p>[NARRATION] In total: 8 platformer and action games, 5 puzzle games, 4 3D games, and 4 arcade-style games. Every single one playable in a browser. Every single one published to itch.io with proper descriptions, screenshots, and tags.</p>
+<hr>
+<h2>THE DECISION LOG (6:30–7:30)</h2>
+<p>[VISUAL] Show <code>decisions.md</code> scrolling — dozens of entries from across the 24-hour period.</p>
+<p>[NARRATION] One of the most fascinating artifacts from this experiment was the decision log. Remember, every time an agent makes a significant choice, it's recorded in <code>decisions.md</code>. After 24 hours, we had a massive log of architectural decisions.</p>
+<p>[VISUAL] Highlight specific entries:</p>
+<pre><code>Decision: Use requestAnimationFrame for game loops
+Author: McManus
+Reason: Consistent 60fps, battery-friendly, auto-pauses in background tabs
+
+Decision: Standardize game state as { score, lives, level, entities[] }
+Author: Verbal
+Reason: Consistent interface lets Fenster write reusable test harness
+
+Decision: All games must support keyboard + touch
+Author: Keaton
+Reason: itch.io audience includes mobile players
+</code></pre>
+<p>[NARRATION] Look at this — McManus decided early on to standardize the game loop pattern using requestAnimationFrame. That decision cascaded to every subsequent game. Verbal standardized the game state shape, which meant Fenster could write a reusable test harness. Keaton mandated keyboard plus touch support because itch.io has mobile players. These weren't random — they were informed decisions that got better as the team learned.</p>
+<hr>
+<h2>THE CONTENT EMPIRE EXPANSION (7:30–9:00)</h2>
+<p>[VISUAL] Show a spreadsheet or dashboard showing: 21 games + articles + video scripts + course modules.</p>
+<p>[NARRATION] But here's where this experiment went from impressive to insane. I didn't just build games. I built a content empire around them. For each game, Kobayashi — the scribe — generated an article breaking down how the game was built. Technical deep-dive, code highlights, design decisions.</p>
+<p>[VISUAL] Show an article titled &quot;Building a Procedural Platformer in HTML5 Canvas&quot; with code snippets and diagrams.</p>
+<p>[NARRATION] Then I had the team generate video scripts for game development tutorials. &quot;How to build a 3D maze game with Three.js in 30 minutes.&quot; Each script follows our video format with VISUAL and NARRATION markers.</p>
+<p>[VISUAL] Show a folder structure:</p>
+<pre><code>content/
+├── games/          # 21 games
+├── articles/       # 21 game dev articles
+├── video-scripts/  # Tutorial scripts
+└── courses/        # Course modules
+</code></pre>
+<p>[NARRATION] And finally, I generated course modules. Five modules on HTML5 game development, using our actual games as examples. Lessons, exercises, quizzes — all based on real code the team wrote. One experiment generated enough content to fuel a YouTube channel, a blog, and a course platform for months.</p>
+<hr>
+<h2>LESSONS LEARNED (9:00–10:30)</h2>
+<p>[VISUAL] Numbered list appearing one at a time with icons.</p>
+<p>[NARRATION] After 24 hours with an AI game studio, here are the biggest lessons.</p>
+<p>[VISUAL] Show: &quot;1. Batch work, don't serialize it&quot;</p>
+<p>[NARRATION] Lesson one: batch your work. Don't ask the team to build one game at a time. Give them three games in parallel. The pipeline stays full, agents stay busy, and you get 3x throughput.</p>
+<p>[VISUAL] Show: &quot;2. Standardize early&quot;</p>
+<p>[NARRATION] Lesson two: standardize early. The best decision we made was establishing a common game state shape in game two. Every game after that was faster because agents knew the pattern.</p>
+<p>[VISUAL] Show: &quot;3. Let knowledge compound&quot;</p>
+<p>[NARRATION] Lesson three: let knowledge compound. Game 21 was significantly better than game 1 — not because I gave better instructions, but because the agents had 20 games worth of learnings in their history files. They knew what worked.</p>
+<p>[VISUAL] Show: &quot;4. Quality varies — and that's OK&quot;</p>
+<p>[NARRATION] Lesson four: quality varies. Some games were great. Some were mediocre. A couple needed manual fixes. That's fine — the point isn't perfection, it's velocity. Ship fast, iterate on what works.</p>
+<p>[VISUAL] Show: &quot;5. Content multiplication is the real power&quot;</p>
+<p>[NARRATION] Lesson five — and this is the big one: content multiplication is the real superpower. One game becomes an article, a tutorial, a course module. The AI team doesn't just build — it documents, teaches, and publishes. That's where the compounding really kicks in.</p>
+<hr>
+<h2>OUTRO &amp; CTA (10:30–11:15)</h2>
+<p>[VISUAL] Show the full collection of 21 games on an itch.io page. Zoom out to show the broader content ecosystem.</p>
+<p>[NARRATION] Twenty-one games in twenty-four hours. Plus articles, scripts, and course content for each one. All powered by Squad and a team of AI agents named after movie characters. If you want to try this yourself, Squad is free and open source — link in the description.</p>
+<p>[VISUAL] Show course thumbnail: &quot;Mastering AI Agent Teams with Squad&quot;</p>
+<p>[NARRATION] I've also put together a full course on mastering Squad — from installation to running your own autonomous content pipeline. Five modules, hands-on exercises, real configurations. Check the link in the description for that too.</p>
+<p>[VISUAL] End card with: subscribe, Squad repo link, course link, itch.io games link.</p>
+<p>[NARRATION] Smash that subscribe button if you want more experiments like this. I'm planning to push this even further — maybe an entire SaaS product built by AI agents. What do you think? Let me know in the comments. See you in the next one!</p>
+<hr>
+<h2>VIDEO METADATA</h2>
+<p><strong>Title:</strong> From Zero to 21 Games in 24 Hours with AI Agent Teams
+<strong>Description:</strong> What happens when you give an AI agent team 24 hours and tell them to build as many games as possible? The answer: 21 HTML5 games (2D + 3D), all playable, all published to itch.io — plus articles, video scripts, and course content for each one. This is the JellyBolt Games experiment using Squad, the open-source AI agent team framework.</p>
+<p>🔗 Squad on GitHub: https://github.com/bradygaster/squad
+🎮 JellyBolt Games on itch.io: [link]
+📚 Squad Mastery Course: [link]
+📦 Install: npm install -g @bradygaster/squad-cli</p>
+<p><strong>Tags:</strong> ai game development, html5 games, ai agent teams, squad framework, game dev challenge, 24 hour challenge, three.js games, canvas games, autonomous ai, content creation ai, itch.io publishing, ai coding challenge</p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

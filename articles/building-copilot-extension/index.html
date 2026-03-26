@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Your First Copilot Extension in 30 Minutes — TechAI Explained</title>
+  <meta name="description" content="A step-by-step guide to building a GitHub Copilot Extension — from project setup to deployment — with a working code example you can ship today.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Developer Tools</span>
+      <time>March 17, 2026</time>
+      <span class="read-time">10 min read</span>
+    </div>
+    <h1>Building Your First Copilot Extension in 30 Minutes</h1>
+    <p class="subtitle">A step-by-step guide to building a GitHub Copilot Extension — from project setup to deployment — with a working code example you can ship today.</p>
+  </header>
+  <div class="article-body">
+    <p>GitHub Copilot Extensions let you build custom AI-powered tools that integrate directly into the Copilot chat experience. Instead of your users switching context to a separate tool, they can invoke your extension with <code>@your-extension</code> right inside their editor or CLI.</p>
+<p>This tutorial walks you through building a working extension from scratch. By the end, you'll have a deployed Copilot Extension that answers questions about any GitHub repository's structure.</p>
+<h2>What You'll Build</h2>
+<p>A <strong>Repo Explorer</strong> extension that lets users type <code>@repo-explorer what's the architecture of this project?</code> and get an intelligent summary of the repository structure, key files, and technology stack.</p>
+<div class="diagram-box">
+┌─────────────────────────────────────────────────┐
+│              USER IN COPILOT CHAT               │
+│                                                 │
+│  @repo-explorer what does this project do?      │
+│                                                 │
+│         │                                       │
+│         ▼                                       │
+│  ┌─────────────────┐    ┌──────────────────┐    │
+│  │ Copilot Platform │───►│ Your Extension   │   │
+│  │ (Routes request) │    │ (Node.js server) │   │
+│  └─────────────────┘    └──────────────────┘    │
+│                                │                │
+│                                ▼                │
+│                     ┌──────────────────┐        │
+│                     │  Response with   │        │
+│                     │  repo analysis   │        │
+│                     └──────────────────┘        │
+└─────────────────────────────────────────────────┘
+</div>
+<h2>Prerequisites</h2>
+<ul>
+<li>Node.js 20+</li>
+<li>A GitHub account</li>
+<li>Basic familiarity with Express.js</li>
+<li>GitHub CLI (<code>gh</code>) installed</li>
+</ul>
+<h2>Step 1: Scaffold the Project</h2>
+<pre><code class="language-bash">mkdir copilot-repo-explorer
+cd copilot-repo-explorer
+npm init -y
+npm install express @octokit/rest
+npm install -D typescript @types/node @types/express tsx
+</code></pre>
+<p>Initialize TypeScript:</p>
+<pre><code class="language-bash">npx tsc --init --target ES2022 --module NodeNext \
+  --moduleResolution NodeNext --outDir dist \
+  --rootDir src --strict
+</code></pre>
+<p>Create the project structure:</p>
+<pre><code>copilot-repo-explorer/
+├── src/
+│   ├── index.ts          # Express server
+│   ├── handler.ts        # Copilot message handler
+│   └── repo-analyzer.ts  # GitHub API integration
+├── package.json
+└── tsconfig.json
+</code></pre>
+<h2>Step 2: Build the Message Handler</h2>
+<p>Copilot Extensions receive messages via Server-Sent Events (SSE). Your server receives a POST request with the user's message and responds with a stream.</p>
+<pre><code class="language-typescript">// src/handler.ts
+import { IncomingMessage, ServerResponse } from &quot;node:http&quot;;
+
+interface CopilotMessage {
+  role: &quot;user&quot; | &quot;assistant&quot;;
+  content: string;
+}
+
+interface CopilotRequest {
+  messages: CopilotMessage[];
+}
+
+export async function handleCopilotRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  body: CopilotRequest
+) {
+  // Set SSE headers
+  res.writeHead(200, {
+    &quot;Content-Type&quot;: &quot;text/event-stream&quot;,
+    &quot;Cache-Control&quot;: &quot;no-cache&quot;,
+    Connection: &quot;keep-alive&quot;,
+  });
+
+  const userMessage = body.messages
+    .filter((m) =&gt; m.role === &quot;user&quot;)
+    .pop()?.content;
+
+  if (!userMessage) {
+    sendSSEMessage(res, &quot;I didn't receive a message. Try again!&quot;);
+    res.end();
+    return;
+  }
+
+  // Analyze the repo
+  const analysis = await analyzeCurrentRepo(userMessage);
+  sendSSEMessage(res, analysis);
+  res.end();
+}
+
+function sendSSEMessage(res: ServerResponse, content: string) {
+  const data = JSON.stringify({
+    choices: [{
+      index: 0,
+      delta: { content, role: &quot;assistant&quot; },
+    }],
+  });
+  res.write(`data: ${data}\n\n`);
+  res.write(&quot;data: [DONE]\n\n&quot;);
+}
+</code></pre>
+<h2>Step 3: Build the Repo Analyzer</h2>
+<p>This is the core logic. It reads the repository tree from GitHub and generates an intelligent summary.</p>
+<pre><code class="language-typescript">// src/repo-analyzer.ts
+import { Octokit } from &quot;@octokit/rest&quot;;
+
+interface RepoStructure {
+  languages: string[];
+  keyFiles: string[];
+  directories: string[];
+  framework: string | null;
+}
+
+export async function analyzeRepo(
+  owner: string,
+  repo: string,
+  token: string
+): Promise&lt;RepoStructure&gt; {
+  const octokit = new Octokit({ auth: token });
+
+  // Get repository tree
+  const { data: tree } = await octokit.git.getTree({
+    owner, repo,
+    tree_sha: &quot;HEAD&quot;,
+    recursive: &quot;true&quot;,
+  });
+
+  const files = tree.tree
+    .filter((item) =&gt; item.type === &quot;blob&quot;)
+    .map((item) =&gt; item.path!);
+
+  // Detect languages
+  const extensions = files
+    .map((f) =&gt; f.split(&quot;.&quot;).pop())
+    .filter(Boolean);
+  const langCounts = extensions.reduce((acc, ext) =&gt; {
+    acc[ext!] = (acc[ext!] || 0) + 1;
+    return acc;
+  }, {} as Record&lt;string, number&gt;);
+
+  const languages = Object.entries(langCounts)
+    .sort(([, a], [, b]) =&gt; b - a)
+    .slice(0, 5)
+    .map(([ext]) =&gt; extensionToLanguage(ext));
+
+  // Detect framework
+  const framework = detectFramework(files);
+
+  // Find key files
+  const keyPatterns = [
+    /readme/i, /contributing/i, /dockerfile/i,
+    /docker-compose/i, /\.github\/workflows/,
+    /package\.json$/, /go\.mod$/, /cargo\.toml$/,
+  ];
+  const keyFiles = files
+    .filter((f) =&gt; keyPatterns.some((p) =&gt; p.test(f)))
+    .slice(0, 10);
+
+  // Top-level directories
+  const directories = [...new Set(
+    files.filter((f) =&gt; f.includes(&quot;/&quot;))
+      .map((f) =&gt; f.split(&quot;/&quot;)[0])
+  )].slice(0, 15);
+
+  return { languages, keyFiles, directories, framework };
+}
+
+function detectFramework(files: string[]): string | null {
+  if (files.some((f) =&gt; f.includes(&quot;next.config&quot;))) return &quot;Next.js&quot;;
+  if (files.some((f) =&gt; f.includes(&quot;angular.json&quot;))) return &quot;Angular&quot;;
+  if (files.some((f) =&gt; f.includes(&quot;nuxt.config&quot;))) return &quot;Nuxt&quot;;
+  if (files.some((f) =&gt; /\.csproj$/.test(f))) return &quot;.NET&quot;;
+  if (files.some((f) =&gt; f.includes(&quot;go.mod&quot;))) return &quot;Go&quot;;
+  if (files.some((f) =&gt; f.includes(&quot;Cargo.toml&quot;))) return &quot;Rust&quot;;
+  return null;
+}
+
+function extensionToLanguage(ext: string): string {
+  const map: Record&lt;string, string&gt; = {
+    ts: &quot;TypeScript&quot;, js: &quot;JavaScript&quot;, py: &quot;Python&quot;,
+    go: &quot;Go&quot;, rs: &quot;Rust&quot;, cs: &quot;C#&quot;, java: &quot;Java&quot;,
+    rb: &quot;Ruby&quot;, php: &quot;PHP&quot;, swift: &quot;Swift&quot;,
+    kt: &quot;Kotlin&quot;, md: &quot;Markdown&quot;, yml: &quot;YAML&quot;,
+  };
+  return map[ext] || ext;
+}
+</code></pre>
+<h2>Step 4: Wire Up the Express Server</h2>
+<pre><code class="language-typescript">// src/index.ts
+import express from &quot;express&quot;;
+import { handleCopilotRequest } from &quot;./handler.js&quot;;
+
+const app = express();
+app.use(express.json());
+
+// Health check
+app.get(&quot;/&quot;, (_req, res) =&gt; {
+  res.json({ status: &quot;ok&quot;, extension: &quot;repo-explorer&quot; });
+});
+
+// Copilot Extension endpoint
+app.post(&quot;/agent&quot;, async (req, res) =&gt; {
+  try {
+    await handleCopilotRequest(req, res, req.body);
+  } catch (error) {
+    console.error(&quot;Handler error:&quot;, error);
+    res.status(500).json({ error: &quot;Internal server error&quot; });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () =&gt; {
+  console.log(`Repo Explorer extension running on port ${PORT}`);
+});
+</code></pre>
+<p>Add the start script to <code>package.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;scripts&quot;: {
+    &quot;dev&quot;: &quot;tsx watch src/index.ts&quot;,
+    &quot;build&quot;: &quot;tsc&quot;,
+    &quot;start&quot;: &quot;node dist/index.js&quot;
+  }
+}
+</code></pre>
+<h2>Step 5: Test Locally</h2>
+<p>Start the development server:</p>
+<pre><code class="language-bash">npm run dev
+</code></pre>
+<p>Test with curl:</p>
+<pre><code class="language-bash">curl -X POST http://localhost:3000/agent \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;messages&quot;: [
+      {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What is this project about?&quot;}
+    ]
+  }'
+</code></pre>
+<p>You should see an SSE response with the analysis.</p>
+<h2>Step 6: Register as a GitHub App</h2>
+<ol>
+<li>Go to <strong>Settings → Developer Settings → GitHub Apps → New GitHub App</strong></li>
+<li>Fill in:
+<ul>
+<li><strong>Name:</strong> <code>repo-explorer-extension</code></li>
+<li><strong>Homepage URL:</strong> Your deployment URL</li>
+<li><strong>Callback URL:</strong> <code>https://your-domain.com/auth/callback</code></li>
+<li><strong>Webhook URL:</strong> <code>https://your-domain.com/webhook</code></li>
+</ul>
+</li>
+<li>Under <strong>Copilot</strong>, enable the extension and set the endpoint to <code>https://your-domain.com/agent</code></li>
+<li>Set permissions: <code>Repository contents: Read</code></li>
+</ol>
+<h2>Step 7: Deploy</h2>
+<p>For quick deployment, use any Node.js hosting platform:</p>
+<pre><code class="language-bash"># Build for production
+npm run build
+
+# Deploy (example with a container)
+docker build -t repo-explorer .
+docker push your-registry/repo-explorer
+</code></pre>
+<p>Here's a minimal <code>Dockerfile</code>:</p>
+<pre><code class="language-dockerfile">FROM node:20-slim
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --production
+COPY dist/ ./dist/
+EXPOSE 3000
+CMD [&quot;node&quot;, &quot;dist/index.js&quot;]
+</code></pre>
+<h2>How the Extension Protocol Works</h2>
+<p>Understanding the protocol helps you debug issues:</p>
+<div class="diagram-box">
+1. User types: @repo-explorer analyze this repo
+                    │
+2. Copilot Platform │ POST /agent
+   sends request ───┘ { messages: [...] }
+                    │
+3. Your server      │ SSE Response
+   streams back ────┘ data: {"choices":[...]}
+                    │  data: [DONE]
+                    │
+4. Copilot renders  │
+   the response ────┘ Markdown in chat UI
+</div>
+<p>Key points:</p>
+<ul>
+<li><strong>Authentication</strong>: The platform sends a <code>X-GitHub-Token</code> header you can use to make API calls on behalf of the user</li>
+<li><strong>Streaming</strong>: Use SSE format — the response renders progressively in the chat</li>
+<li><strong>Markdown</strong>: Your response is rendered as Markdown, so use formatting, code blocks, and lists</li>
+</ul>
+<h2>Adding Slash Commands</h2>
+<p>Make your extension more powerful with slash commands:</p>
+<pre><code class="language-typescript">// Parse slash commands from the user message
+function parseCommand(message: string): { command: string; args: string } {
+  const match = message.match(/^\/(\w+)\s*(.*)/);
+  if (match) {
+    return { command: match[1], args: match[2] };
+  }
+  return { command: &quot;default&quot;, args: message };
+}
+
+// In your handler:
+const { command, args } = parseCommand(userMessage);
+
+switch (command) {
+  case &quot;structure&quot;:
+    return analyzeStructure(args);
+  case &quot;deps&quot;:
+    return analyzeDependencies(args);
+  case &quot;security&quot;:
+    return securityScan(args);
+  default:
+    return generalAnalysis(args);
+}
+</code></pre>
+<p>Users can then type:</p>
+<ul>
+<li><code>@repo-explorer /structure</code> — show project structure</li>
+<li><code>@repo-explorer /deps</code> — analyze dependencies</li>
+<li><code>@repo-explorer /security</code> — run security checks</li>
+</ul>
+<h2>Common Pitfalls</h2>
+<ol>
+<li><strong>Forgetting SSE format</strong> — Copilot expects Server-Sent Events, not a regular JSON response</li>
+<li><strong>Not handling the token</strong> — use <code>X-GitHub-Token</code> for API calls; don't hardcode tokens</li>
+<li><strong>Slow responses</strong> — stream partial results so users see progress</li>
+<li><strong>No error handling</strong> — always send a user-friendly error message instead of crashing</li>
+</ol>
+<h2>Next Steps</h2>
+<p>You now have a working Copilot Extension. Here's where to go next:</p>
+<ul>
+<li>Add <strong>caching</strong> to avoid redundant GitHub API calls</li>
+<li>Implement <strong>conversation memory</strong> so follow-up questions work</li>
+<li>Add more <strong>slash commands</strong> for specialized analysis</li>
+<li>Deploy behind a <strong>CDN</strong> for global performance</li>
+<li>Submit to the <strong>GitHub Marketplace</strong> for public distribution</li>
+</ul>
+<p>The Copilot Extensions ecosystem is new and growing fast. Building an extension now means you're in early — when the marketplace scales, your extension is already there.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

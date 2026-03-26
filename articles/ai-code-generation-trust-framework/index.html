@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Code Generation: When to Trust It and When to Rewrite — TechAI Explained</title>
+  <meta name="description" content="A practical framework for evaluating AI-generated code — covering the trust spectrum, the five categories where AI excels, and the red flags that mean you should rewrite from scratch.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">AI</span>
+      <time>March 9, 2026</time>
+      <span class="read-time">10 min read</span>
+    </div>
+    <h1>AI Code Generation: When to Trust It and When to Rewrite</h1>
+    <p class="subtitle">A practical framework for evaluating AI-generated code — covering the trust spectrum, the five categories where AI excels, and the red flags that mean you should rewrite from scratch.</p>
+  </header>
+  <div class="article-body">
+    <p>AI code generation has reached an inflection point. The tooling is good enough that rejecting it entirely makes you slower. But trusting it blindly fills your codebase with subtle bugs, security holes, and unmaintainable patterns. The skill that matters now isn't whether you use AI to generate code — it's knowing <strong>when to accept, when to modify, and when to rewrite</strong>.</p>
+<p>This guide provides a practical decision framework based on real-world patterns.</p>
+<h2>The Trust Spectrum</h2>
+<p>Not all AI-generated code deserves the same level of scrutiny. Place every generation on this spectrum:</p>
+<div class="diagram-box">
+LOW RISK                                          HIGH RISK
+────────────────────────────────────────────────────────────
+Accept      Review       Modify       Scrutinize    Rewrite
+as-is       quickly      parts        line-by-line   entirely
+<p>│           │            │            │              │
+Boilerplate Tests        Business     Security       Crypto,
+CRUD ops    Utilities    logic        Auth/AuthZ     Financial
+Config      Adapters     API design   Data access    Compliance
+Formatting  Conversions  State mgmt   Input parsing  Legal logic</p>
+</div>
+<h2>Category 1: Accept As-Is (Boilerplate &amp; Config)</h2>
+<p>AI excels at generating code you'd copy from documentation or Stack Overflow anyway. There's minimal risk because the patterns are well-established and easily verified.</p>
+<h3>Examples That AI Nails</h3>
+<pre><code class="language-typescript">// Express server setup — accept as-is
+import express from 'express';
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') }));
+app.listen(process.env.PORT || 3000);
+</code></pre>
+<pre><code class="language-yaml"># Docker Compose for local dev — accept as-is
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: devpass
+    ports:
+      - &quot;5432:5432&quot;
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+</code></pre>
+<pre><code class="language-csharp">// DTO mapping — accept as-is
+public static OrderResponse ToResponse(this Order order) =&gt; new()
+{
+    Id = order.Id,
+    CustomerName = order.Customer.Name,
+    Items = order.Items.Select(i =&gt; new OrderItemResponse
+    {
+        ProductName = i.Product.Name,
+        Quantity = i.Quantity,
+        UnitPrice = i.UnitPrice,
+    }).ToList(),
+    Total = order.Total,
+    CreatedAt = order.CreatedAt,
+};
+</code></pre>
+<p><strong>Why it's safe:</strong> These patterns are deterministic. There's one right way to set up an Express server or write a DTO mapper. The AI has seen millions of examples. Verify it compiles, move on.</p>
+<h2>Category 2: Review Quickly (Tests &amp; Utilities)</h2>
+<p>AI generates decent test code and utility functions, but common issues include: incomplete edge cases, wrong assertions, and outdated API usage.</p>
+<pre><code class="language-typescript">// AI-generated test — review for completeness
+describe('calculateDiscount', () =&gt; {
+  it('applies 10% discount for orders over $100', () =&gt; {
+    expect(calculateDiscount(150)).toBe(15);
+  });
+
+  it('applies no discount for orders under $100', () =&gt; {
+    expect(calculateDiscount(50)).toBe(0);
+  });
+
+  it('handles zero amount', () =&gt; {
+    expect(calculateDiscount(0)).toBe(0);
+  });
+
+  // ⚠️ AI often MISSES these:
+  // - Negative amounts
+  // - Boundary value ($100 exactly)
+  // - Non-numeric input
+  // - Very large numbers (overflow)
+});
+</code></pre>
+<p><strong>Review checklist for AI tests:</strong></p>
+<ul>
+<li>[ ] Boundary values tested (off-by-one is AI's most common bug)</li>
+<li>[ ] Error cases included (null, undefined, negative, overflow)</li>
+<li>[ ] Assertions are correct (not just <code>toBeTruthy()</code>)</li>
+<li>[ ] Test descriptions match what's actually being tested</li>
+<li>[ ] No hardcoded values that should be constants</li>
+</ul>
+<h2>Category 3: Modify Parts (Business Logic)</h2>
+<p>AI can scaffold business logic, but it makes assumptions about your domain that are often wrong. Accept the structure, rewrite the details.</p>
+<pre><code class="language-typescript">// AI-generated order processing — NEEDS MODIFICATION
+async function processOrder(order: Order): Promise&lt;ProcessedOrder&gt; {
+  // ✅ Structure is good
+  validateOrder(order);
+  const inventory = await checkInventory(order.items);
+  const payment = await chargePayment(order.total, order.paymentMethod);
+  const shipment = await createShipment(order);
+
+  return {
+    orderId: order.id,
+    status: 'completed',
+    trackingNumber: shipment.tracking,
+  };
+}
+
+// ⚠️ Problems:
+// 1. No transaction/saga pattern — if shipment fails, payment isn't refunded
+// 2. No idempotency check — processing the same order twice charges twice
+// 3. Inventory check and reservation are separate — race condition
+// 4. No partial fulfillment logic — what if only some items are in stock?
+// 5. Error handling is missing entirely
+</code></pre>
+<p><strong>The fix pattern:</strong> Keep the function signature and flow. Add the domain-specific error handling, transaction management, and edge cases that AI doesn't know about.</p>
+<h2>Category 4: Scrutinize Line-by-Line (Security &amp; Data Access)</h2>
+<p>AI-generated security code and database queries require the highest scrutiny. The code often <strong>looks</strong> correct but has subtle vulnerabilities.</p>
+<h3>SQL Injection — AI Gets This Wrong More Than You'd Think</h3>
+<pre><code class="language-python"># AI-generated — LOOKS fine but has issues
+def search_users(query: str, role: str = None):
+    sql = &quot;SELECT * FROM users WHERE name ILIKE %s&quot;
+    params = [f&quot;%{query}%&quot;]
+
+    if role:
+        sql += f&quot; AND role = '{role}'&quot;  # 💀 SQL INJECTION!
+        # AI parameterized the first value but not the second
+
+    return db.execute(sql, params)
+</code></pre>
+<h3>Auth Logic — Subtle Bugs</h3>
+<pre><code class="language-typescript">// AI-generated auth middleware — SCRUTINIZE CAREFULLY
+async function authMiddleware(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'No token' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// ⚠️ Issues AI commonly introduces:
+// 1. No algorithm restriction — vulnerable to 'none' algorithm attack
+// 2. No audience/issuer validation
+// 3. Token from header only — what about cookies?
+// 4. No token revocation check
+// 5. Error message might leak information
+
+// CORRECT version:
+const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+  algorithms: ['HS256'],     // Restrict algorithms
+  audience: 'my-app',        // Validate audience
+  issuer: 'auth.my-app.com', // Validate issuer
+});
+</code></pre>
+<h3>The Security Review Checklist for AI Code</h3>
+<ul>
+<li>[ ] All user inputs are parameterized/escaped</li>
+<li>[ ] Authentication checks validate algorithm, audience, and issuer</li>
+<li>[ ] Authorization checks are present (not just authentication)</li>
+<li>[ ] Secrets are not hardcoded or logged</li>
+<li>[ ] Error messages don't leak internal details</li>
+<li>[ ] Rate limiting is applied to sensitive endpoints</li>
+<li>[ ] CORS is configured restrictively, not <code>*</code></li>
+</ul>
+<h2>Category 5: Rewrite Entirely (Crypto, Financial, Compliance)</h2>
+<p>Some code should never be accepted from AI generation. Period.</p>
+<h3>Code You Should Always Write Yourself</h3>
+<ol>
+<li><strong>Cryptographic implementations</strong> — AI will suggest patterns that look correct but have timing attacks, weak random number generation, or deprecated algorithms</li>
+<li><strong>Financial calculations</strong> — floating-point errors in currency math create real liability</li>
+<li><strong>Compliance logic</strong> — GDPR data retention, HIPAA access controls, SOX audit trails</li>
+<li><strong>Security-critical parsers</strong> — XML/JSON parsers that handle untrusted input</li>
+<li><strong>Consensus algorithms</strong> — distributed systems coordination logic</li>
+</ol>
+<blockquote>
+<p>If the bug causes a security breach, financial loss, or regulatory violation — don't trust AI-generated code. Write it. Review it. Test it. Then have someone else review it.</p>
+</blockquote>
+<h2>The Decision Framework</h2>
+<p>When AI generates code, ask these five questions:</p>
+<div class="diagram-box">
+1. BLAST RADIUS: If this code has a bug, what's the worst outcome?
+   Low (UI glitch) ──────────────────── High (data breach)
+<ol start="2">
+<li>
+<p>DOMAIN SPECIFICITY: How unique is this to MY application?
+Generic (CRUD, config) ──────────── Specific (business rules)</p>
+</li>
+<li>
+<p>VERIFIABILITY: Can I quickly verify this is correct?
+Easy (run tests) ────────────────── Hard (needs prod data)</p>
+</li>
+<li>
+<p>SECURITY SURFACE: Does this handle untrusted input?
+No (internal service) ───────────── Yes (user-facing API)</p>
+</li>
+<li>
+<p>REGULATORY IMPACT: Does this affect compliance?
+No ──────────────────────────────── Yes (audit, legal)</p>
+</li>
+</ol>
+<p>Score each 1-5. Total &gt; 15? Rewrite. Total &lt; 10? Accept.</p>
+</div>
+<h2>Practical Workflow</h2>
+<p>Here's the workflow that maximizes AI productivity while minimizing risk:</p>
+<h3>Step 1: Generate with Context</h3>
+<p>Give the AI maximum context — relevant files, types, conventions. Vague prompts produce generic code.</p>
+<pre><code>❌ &quot;Write a user service&quot;
+✅ &quot;Write a UserService class that uses the existing UserRepository 
+    (see src/repos/user.repo.ts) to implement getById, create, and 
+    update. Follow the error handling pattern in OrderService. Use 
+    Zod for input validation.&quot;
+</code></pre>
+<h3>Step 2: Categorize Before Reading</h3>
+<p>Before reading the generated code, determine which category it falls into. This sets your review depth.</p>
+<h3>Step 3: Test First</h3>
+<p>Run the generated code against tests before reading it line by line. If tests pass, you've reduced the review surface. If they fail, you know exactly where to look.</p>
+<h3>Step 4: Check for AI's Common Mistakes</h3>
+<p>Regardless of category, check for these patterns:</p>
+<ul>
+<li><strong>Hallucinated APIs</strong> — methods or packages that don't exist</li>
+<li><strong>Outdated patterns</strong> — training data cutoff means AI suggests deprecated approaches</li>
+<li><strong>Missing error handling</strong> — AI optimizes for the happy path</li>
+<li><strong>Incorrect types</strong> — especially in TypeScript, types are often <code>any</code> or wrong</li>
+<li><strong>Copy-paste-itis</strong> — repeated code that should be abstracted</li>
+</ul>
+<h2>The Bottom Line</h2>
+<p>AI code generation is a tool, not a teammate. It doesn't understand your business domain, your security requirements, or your production environment. It understands patterns.</p>
+<p>Use it for patterns. Verify it for logic. Rewrite it for security. And always, always test what it gives you.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

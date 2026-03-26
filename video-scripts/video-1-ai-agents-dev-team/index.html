@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> — TechAI Explained</title>
+  <meta name="description" content="Complex tech. Simple explanations. Tutorials on AI, DevOps, and modern software engineering.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Tutorial</span>
+      <time>Invalid Date</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1></h1>
+    <p class="subtitle"></p>
+  </header>
+  <div class="article-body">
+    <h1>Video 1: &quot;I Let AI Agents Run My Entire Dev Team — Here's What Happened&quot;</h1>
+<p><strong>Channel:</strong> TechAI Explained
+<strong>Duration:</strong> 8–10 minutes
+<strong>Style:</strong> Fast-paced developer walkthrough with screen recordings</p>
+<hr>
+<h2>INTRO (0:00–0:45)</h2>
+<p>[VISUAL] Quick montage: terminal windows spawning, code appearing in editors, pull requests merging — all happening simultaneously. Cut to host on camera.</p>
+<p>[NARRATION] What if you could say &quot;build me a login page&quot; and five AI agents — each with their own personality, memory, and expertise — just… did it? Not one chatbot pretending to be five people. Five separate agents, running in parallel, sharing decisions, and learning from each other. Today I'm going to show you Squad — an open-source framework that gives you an AI development team through GitHub Copilot. And yes… every agent is named after a character from a movie. Let's get into it.</p>
+<hr>
+<h2>WHAT IS SQUAD? (0:45–2:30)</h2>
+<p>[VISUAL] Show the Squad GitHub repo (github.com/bradygaster/squad). Highlight the tagline: &quot;AI agent teams for any project. One command.&quot;</p>
+<p>[NARRATION] Squad was created by Brady Gaster, and it's beautifully simple in concept. You install it into your project, and it scaffolds an entire AI team — a lead engineer, frontend specialist, backend specialist, tester, and a scribe — right into your repo as markdown files.</p>
+<p>[VISUAL] Show the <code>.squad/</code> directory structure in a file explorer. Zoom into <code>team.md</code>, <code>routing.md</code>, <code>decisions.md</code>.</p>
+<p>[NARRATION] Each agent has its own charter — that's like its job description, personality, and voice. They have their own history files where they remember what they've learned about YOUR project. And here's what makes it different from just prompting ChatGPT with &quot;pretend you're a frontend developer&quot; — each agent runs in its own execution context. They read only their own knowledge. They write back what they learned. And all of it lives in git.</p>
+<p>[VISUAL] Show the <code>agents/</code> folder with individual agent directories, each containing <code>charter.md</code> and <code>history.md</code>.</p>
+<p>[NARRATION] When someone clones your repo, they get the team. With all the accumulated knowledge. That's wild.</p>
+<hr>
+<h2>THE CASTING SYSTEM (2:30–3:30)</h2>
+<p>[VISUAL] Show <code>casting/policy.json</code> — highlight the &quot;universe&quot; field. Show example cast from The Usual Suspects.</p>
+<p>[NARRATION] Here's one of my favorite parts — the casting system. Squad doesn't give you boring names like &quot;Agent-1&quot; or &quot;Frontend-Bot.&quot; It casts your agents from movie universes. The default? The Usual Suspects. So your lead is Keaton. Your frontend engineer is McManus. Your backend is Verbal. Your tester is Fenster.</p>
+<p>[VISUAL] Show a split screen of agent names mapped to roles.</p>
+<p>[NARRATION] Why does this matter? Because names are memorable. You start saying &quot;Keaton handles the architecture decisions&quot; instead of &quot;the lead agent.&quot; You build a relationship with these agents over time. And when you add a sixth agent? They get cast from the same universe. The identity carries forward. It sounds silly, but it works.</p>
+<hr>
+<h2>THE DEMO: &quot;Build Me a Login Page&quot; (3:30–6:30)</h2>
+<p>[VISUAL] Terminal: <code>copilot --yolo</code>, then typing the command to Squad.</p>
+<p>[NARRATION] Alright, let's see this in action. I'm going to start Copilot with the <code>--yolo</code> flag — which auto-approves tool calls so we don't get interrupted — and I'm going to ask the team to build a login page.</p>
+<p>[VISUAL] Type: <code>Team, build the login page with email/password auth</code></p>
+<p>[NARRATION] Watch what happens. The coordinator reads the request and immediately fans out to multiple agents — simultaneously.</p>
+<p>[VISUAL] Show the terminal output with parallel agent spawning:</p>
+<pre><code>🏗️ Keaton — analyzing requirements...
+⚛️ McManus — building login form...
+🔧 Verbal — setting up auth endpoints...
+🧪 Fenster — writing test cases from spec...
+📋 Kobayashi — logging everything...
+</code></pre>
+<p>[NARRATION] Keaton, the lead, breaks down the requirements. McManus starts on the React login form. Verbal spins up the authentication endpoints on the backend. Fenster is already writing test cases based on the spec — before the code even exists. And Kobayashi? The scribe. Silently logging every decision to <code>decisions.md</code> so the team has a shared brain.</p>
+<p>[VISUAL] Show <code>decisions.md</code> being updated in real-time with entries like &quot;Decision: Use bcrypt for password hashing. Author: Verbal. Reason: team expertise, battle-tested library.&quot;</p>
+<p>[NARRATION] This is the part that blew my mind. When Verbal decides to use bcrypt for password hashing, that decision gets written to the shared decisions file. Now when McManus is building the login form, it knows what auth strategy the backend chose — without anyone having to coordinate manually.</p>
+<p>[VISUAL] Show the completed files: <code>LoginForm.tsx</code>, <code>auth.ts</code> routes, <code>login.test.ts</code>.</p>
+<p>[NARRATION] In about two minutes, we have a login form component, authentication API endpoints, and test coverage. All created by different agents, all consistent with each other, because they share a decision log.</p>
+<hr>
+<h2>KNOWLEDGE COMPOUNDS (6:30–7:30)</h2>
+<p>[VISUAL] Show <code>history.md</code> files for different agents with accumulated learnings.</p>
+<p>[NARRATION] Here's the thing that makes Squad genuinely different from just asking an AI to write code. Knowledge compounds across sessions. Every time McManus works on your project, it writes its learnings to <code>history.md</code>. &quot;This project uses Tailwind v4.&quot; &quot;Dark mode is stored in theme.config.ts.&quot; &quot;The design system uses shadcn components.&quot;</p>
+<p>[VISUAL] Show a before/after of agent history — empty file vs. rich context file.</p>
+<p>[NARRATION] After a few sessions, your agents know your conventions, your preferences, your architecture. They stop asking questions they've already answered. They get BETTER the more you use them. And because it's all in git, this knowledge transfers to anyone who clones the repo.</p>
+<hr>
+<h2>THE HOOK PIPELINE (7:30–8:30)</h2>
+<p>[VISUAL] Show code snippets of the HookPipeline with file-write guards and PII scrubbing.</p>
+<p>[NARRATION] Now, giving AI agents freedom to write code sounds scary, right? Squad handles this with what they call the Hook Pipeline. These are code-level guardrails — not prompt-level suggestions.</p>
+<p>[VISUAL] Show the <code>allowedWritePaths</code> configuration.</p>
+<p>[NARRATION] You define which directories agents can write to. If an agent — compromised or confused — tries to write outside those paths? Blocked. Not because we asked nicely in a prompt. Because code won't let it. There's also PII scrubbing, reviewer lockouts — if a tester rejects code, the original author can't sneak a fix in — and rate limiting on how often agents can ask you for help.</p>
+<hr>
+<h2>OUTRO &amp; CTA (8:30–9:00)</h2>
+<p>[VISUAL] Show the Squad GitHub repo, star count, installation command.</p>
+<p>[NARRATION] Squad is open source and in alpha right now. You can install it with <code>npm install -g @bradygaster/squad-cli</code> and run <code>squad init</code> in any project. It works with GitHub Copilot — both the CLI and VS Code.</p>
+<p>[VISUAL] Show on screen: <code>npm install -g @bradygaster/squad-cli &amp;&amp; squad init</code></p>
+<p>[NARRATION] I'm going to be doing a deep dive on Ralph — the autonomous work monitor — in the next video. Ralph watches your GitHub issues and keeps shipping code while you sleep. If that sounds insane, that's because it kind of is. Subscribe so you don't miss it, and drop a comment telling me — what would YOU build with an AI dev team? See you in the next one.</p>
+<p>[VISUAL] End card with subscribe button, link to Squad repo, and next video thumbnail.</p>
+<hr>
+<h2>VIDEO METADATA</h2>
+<p><strong>Title:</strong> I Let AI Agents Run My Entire Dev Team — Here's What Happened
+<strong>Description:</strong> What happens when you give five AI agents their own identities, memories, and expertise — then tell them to build a login page? Meet Squad, the open-source framework that gives you an AI dev team through GitHub Copilot. Each agent has a name from a movie, runs in its own context, shares decisions with teammates, and gets smarter the more you use it.</p>
+<p>🔗 Squad on GitHub: https://github.com/bradygaster/squad
+📦 Install: npm install -g @bradygaster/squad-cli</p>
+<p><strong>Tags:</strong> ai agents, ai development team, squad framework, github copilot, ai coding, autonomous agents, multi-agent systems, ai programming, developer tools, open source ai</p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

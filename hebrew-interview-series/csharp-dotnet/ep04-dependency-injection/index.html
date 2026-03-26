@@ -1,0 +1,193 @@
+<h1>שיעור 4: Dependency Injection — DI Containers ו-Lifetime Scopes</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Dependency Injection הוא אחד העקרונות הכי נשאלים בראיונות .NET.<br>
+כמעט כל חברה שמשתמשת ב-ASP.NET Core תשאל עליו.<br>
+הבנה טובה של DI, הclifetimes והcontainers מראה שאתם מבינים <strong>ארכיטקטורה נכונה</strong>.</p>
+<hr>
+<h2>מה הוא Dependency Injection?</h2>
+<p><strong>Dependency Injection</strong> הוא עיקרון שבו אובייקט מקבל את ה-<strong>dependencies</strong> שלו מבחוץ, במקום ליצור אותם בעצמו.</p>
+<pre><code class="language-csharp">// ❌ ללא DI — קשה לבדוק, קשה לשנות
+public class OrderService
+{
+    private readonly EmailService _emailService;
+    
+    public OrderService()
+    {
+        _emailService = new EmailService(); // תלות ישירה!
+    }
+}
+
+// ✅ עם DI — גמיש וניתן לבדיקה
+public class OrderService
+{
+    private readonly IEmailService _emailService;
+    
+    public OrderService(IEmailService emailService) // מוזרק מבחוץ
+    {
+        _emailService = emailService;
+    }
+}
+</code></pre>
+<hr>
+<h2>Registration ב-ASP.NET Core</h2>
+<pre><code class="language-csharp">// Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// רישום services
+builder.Services.AddScoped&lt;IOrderService, OrderService&gt;();
+builder.Services.AddTransient&lt;IEmailService, EmailService&gt;();
+builder.Services.AddSingleton&lt;IConfiguration&gt;(config);
+
+var app = builder.Build();
+</code></pre>
+<hr>
+<h2>שלושת ה-Lifetimes — הנושא הכי נשאל!</h2>
+<h3>1. Transient — כל פעם instance חדש</h3>
+<pre><code class="language-csharp">builder.Services.AddTransient&lt;IEmailService, EmailService&gt;();
+</code></pre>
+<ul>
+<li><strong>Instance חדש</strong> בכל פעם שמבקשים</li>
+<li>מתאים לservices <strong>stateless</strong> וקלות</li>
+<li><strong>זהירות:</strong> אם מוזרק ל-Singleton — נשמר!</li>
+</ul>
+<pre><code class="language-csharp">public class Controller
+{
+    // כל HTTP request יקבל EmailService חדש
+    public Controller(IEmailService email1, IEmailService email2)
+    {
+        // email1 != email2 — שני instances שונים!
+    }
+}
+</code></pre>
+<h3>2. Scoped — instance אחד לbag scope</h3>
+<pre><code class="language-csharp">builder.Services.AddScoped&lt;IOrderService, OrderService&gt;();
+</code></pre>
+<ul>
+<li><strong>Instance אחד</strong> לכל HTTP request (ב-web)</li>
+<li>משותף בתוך אותו request</li>
+<li><strong>מתאים ל:</strong> DbContext, Unit of Work</li>
+</ul>
+<pre><code class="language-csharp">// באותו request — אותו instance
+public class ServiceA
+{
+    public ServiceA(IOrderService orders) { }
+}
+
+public class ServiceB
+{
+    public ServiceB(IOrderService orders) { } // אותו orders כמו ServiceA!
+}
+</code></pre>
+<h3>3. Singleton — instance אחד לכל חיי האפליקציה</h3>
+<pre><code class="language-csharp">builder.Services.AddSingleton&lt;ICacheService, CacheService&gt;();
+</code></pre>
+<ul>
+<li><strong>Instance אחד</strong> לכל חיי האפליקציה</li>
+<li><strong>זהירות:</strong> חייב להיות thread-safe!</li>
+<li><strong>מתאים ל:</strong> Cache, Configuration, Logger factories</li>
+</ul>
+<hr>
+<h2>Captive Dependency — הבאג הנפוץ</h2>
+<pre><code class="language-csharp">// ❌ בעיה! — Singleton מחזיק Scoped dependency
+builder.Services.AddSingleton&lt;MyService&gt;();
+builder.Services.AddScoped&lt;IDbContext, AppDbContext&gt;();
+
+public class MyService
+{
+    // ❌ DbContext הוא Scoped, אבל MyService הוא Singleton
+    // DbContext ראשון ייתפס לנצח ב-MyService!
+    public MyService(IDbContext dbContext) { }
+}
+</code></pre>
+<p><strong>הכלל:</strong> Singleton לא יכול להחזיק dependency עם חיים קצרים יותר.</p>
+<pre><code>Singleton &gt; Scoped &gt; Transient
+</code></pre>
+<hr>
+<h2>IServiceProvider ו-Factory Pattern</h2>
+<pre><code class="language-csharp">// כשצריך ליצור service דינמית
+public class OrderProcessor
+{
+    private readonly IServiceProvider _serviceProvider;
+    
+    public OrderProcessor(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+    
+    public void ProcessOrder(OrderType type)
+    {
+        // יצירה דינמית לפי סוג
+        using var scope = _serviceProvider.CreateScope();
+        var handler = scope.ServiceProvider.GetRequiredService&lt;IOrderHandler&gt;();
+        handler.Handle(type);
+    }
+}
+</code></pre>
+<hr>
+<h2>Named Services וKeyed DI (C# 8+ / .NET 8)</h2>
+<pre><code class="language-csharp">// .NET 8 — Keyed Services
+builder.Services.AddKeyedScoped&lt;INotificationService, EmailService&gt;(&quot;email&quot;);
+builder.Services.AddKeyedScoped&lt;INotificationService, SmsService&gt;(&quot;sms&quot;);
+
+public class NotificationManager
+{
+    public NotificationManager(
+        [FromKeyedServices(&quot;email&quot;)] INotificationService emailService,
+        [FromKeyedServices(&quot;sms&quot;)] INotificationService smsService)
+    { }
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה ההבדל בין Transient, Scoped ו-Singleton?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li><strong>Transient:</strong> חדש בכל הזרקה — stateless services</li>
+<li><strong>Scoped:</strong> חדש בכל request — DbContext, Unit of Work</li>
+<li><strong>Singleton:</strong> אחד לאפליקציה — Cache, Config</li>
+</ul>
+<h3>שאלה 2: &quot;מה הוא Captive Dependency?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> כשservice בעל חיים ארוכים מחזיק תלות בעלת חיים קצרים יותר. Singleton שמחזיק Scoped dependency — ה-Scoped לא יתחדש.</p>
+<h3>שאלה 3: &quot;למה DI עדיף על new?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li><strong>Testability:</strong> אפשר להזריק מocks בבדיקות</li>
+<li><strong>Loose Coupling:</strong> תלות בinterface, לא ב-implementation</li>
+<li><strong>Lifecycle Management:</strong> ה-container מנהל חיים ושחרור</li>
+</ul>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>Lifetime</th>
+<th>יצירה</th>
+<th>שחרור</th>
+<th>שימוש</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transient</td>
+<td>בכל הזרקה</td>
+<td>בסוף scope</td>
+<td>Stateless utilities</td>
+</tr>
+<tr>
+<td>Scoped</td>
+<td>בכל request</td>
+<td>בסוף request</td>
+<td>DbContext, UoW</td>
+</tr>
+<tr>
+<td>Singleton</td>
+<td>פעם אחת</td>
+<td>סגירת app</td>
+<td>Cache, Config</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 4 מתוך 10</em></p>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kubernetes Autoscaling: A Visual Guide — TechAI Explained</title>
+  <meta name="description" content="A complete visual guide to Kubernetes autoscaling — HPA, VPA, Cluster Autoscaler, and KEDA — with practical examples and decision frameworks.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">DevOps</span>
+      <time>March 16, 2026</time>
+      <span class="read-time">13 min read</span>
+    </div>
+    <h1>Kubernetes Autoscaling: A Visual Guide</h1>
+    <p class="subtitle">A complete visual guide to Kubernetes autoscaling — HPA, VPA, Cluster Autoscaler, and KEDA — with practical examples and decision frameworks.</p>
+  </header>
+  <div class="article-body">
+    <p>Kubernetes autoscaling sounds simple: &quot;add more pods when traffic goes up.&quot; In reality, there are four different autoscaling mechanisms, each solving a different problem. Picking the wrong one — or misconfiguring the right one — leads to either wasted money or dropped requests.</p>
+<p>This visual guide covers all four autoscalers, when to use each, and the configuration patterns that work in production.</p>
+<h2>The Autoscaling Landscape</h2>
+<div class="diagram-box">
+┌─────────────────────────────────────────────────────┐
+│            KUBERNETES AUTOSCALING STACK              │
+│                                                     │
+│  ┌─────────────────────────────────────────────┐    │
+│  │         CLUSTER AUTOSCALER                  │    │
+│  │     Adds/removes NODES from the cluster     │    │
+│  └─────────────────────┬───────────────────────┘    │
+│                        │                            │
+│  ┌─────────────────────┼───────────────────────┐    │
+│  │      NODE           │          NODE          │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐   │    │
+│  │  │   HPA    │  │   VPA    │  │   KEDA   │   │    │
+│  │  │ Scales   │  │ Resizes  │  │ Event-   │   │    │
+│  │  │ pod      │  │ pod      │  │ driven   │   │    │
+│  │  │ COUNT    │  │ RESOURCES│  │ scaling  │   │    │
+│  │  └──────────┘  └──────────┘  └──────────┘   │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+</div>
+<ul>
+<li><strong>HPA</strong> (Horizontal Pod Autoscaler): scales the <strong>number</strong> of pods</li>
+<li><strong>VPA</strong> (Vertical Pod Autoscaler): scales the <strong>resources</strong> of each pod</li>
+<li><strong>Cluster Autoscaler</strong>: scales the <strong>number of nodes</strong></li>
+<li><strong>KEDA</strong>: event-driven autoscaling based on <strong>external metrics</strong></li>
+</ul>
+<h2>1. Horizontal Pod Autoscaler (HPA)</h2>
+<p>The HPA watches a metric (CPU, memory, or custom metrics) and adjusts the replica count of a Deployment or StatefulSet.</p>
+<h3>How It Works</h3>
+<div class="diagram-box">
+                    Metrics Server
+                         │
+                    ┌────┴────┐
+                    │ Current │
+                    │ CPU: 80%│
+                    │ Target: │
+                    │ 50%     │
+                    └────┬────┘
+                         │
+                    ┌────┴────┐
+                    │   HPA   │
+                    │ Formula:│
+                    │ desired │
+                    │= ceil(  │
+                    │ current │
+                    │/ target │
+                    │* replicas│
+                    │)        │
+                    └────┬────┘
+                         │
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+       ┌────────┐  ┌────────┐  ┌────────┐
+       │ Pod 1  │  │ Pod 2  │  │ Pod 3  │
+       │(exists)│  │(exists)│  │ (NEW)  │
+       └────────┘  └────────┘  └────────┘
+</div>
+<p>The scaling formula: <code>desiredReplicas = ceil(currentMetricValue / targetMetricValue × currentReplicas)</code></p>
+<p>If you have 2 pods at 80% CPU with a target of 50%, the HPA calculates: <code>ceil(80/50 × 2) = ceil(3.2) = 4 pods</code>.</p>
+<h3>Basic HPA Configuration</h3>
+<pre><code class="language-yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-app
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 4
+          periodSeconds: 60
+      selectPolicy: Max
+</code></pre>
+<h3>Critical: The Behavior Section</h3>
+<p>The <code>behavior</code> section controls <strong>how fast</strong> scaling happens. Without it, the HPA uses defaults that can cause oscillation.</p>
+<p><strong>Scale-up strategy:</strong></p>
+<ul>
+<li>React quickly — 30-second stabilization window</li>
+<li>Allow doubling (100% increase) or adding 4 pods, whichever is more</li>
+<li>Use <code>selectPolicy: Max</code> to pick the more aggressive option</li>
+</ul>
+<p><strong>Scale-down strategy:</strong></p>
+<ul>
+<li>React slowly — 300-second (5 minute) stabilization window</li>
+<li>Remove at most 25% of pods per minute</li>
+<li>This prevents thrashing during traffic fluctuations</li>
+</ul>
+<h3>HPA with Custom Metrics</h3>
+<p>CPU and memory aren't always the right signals. For a web API, requests-per-second is more meaningful:</p>
+<pre><code class="language-yaml">metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: 1000
+</code></pre>
+<p>This scales based on actual traffic rather than resource utilization.</p>
+<h2>2. Vertical Pod Autoscaler (VPA)</h2>
+<p>While HPA adds more pods, VPA makes existing pods bigger (or smaller). It adjusts CPU and memory requests and limits.</p>
+<h3>When VPA Wins Over HPA</h3>
+<ul>
+<li><strong>Stateful workloads</strong> — databases, caches, queues that can't easily be horizontally scaled</li>
+<li><strong>Batch jobs</strong> — jobs that need varying resources based on input size</li>
+<li><strong>Right-sizing</strong> — finding the correct resource requests for your workloads</li>
+</ul>
+<pre><code class="language-yaml">apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: database-vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: postgres
+  updatePolicy:
+    updateMode: &quot;Auto&quot;  # or &quot;Off&quot; for recommendation-only
+  resourcePolicy:
+    containerPolicies:
+      - containerName: postgres
+        minAllowed:
+          cpu: 250m
+          memory: 512Mi
+        maxAllowed:
+          cpu: 4
+          memory: 8Gi
+        controlledResources: [&quot;cpu&quot;, &quot;memory&quot;]
+</code></pre>
+<blockquote>
+<p><strong>Warning</strong>: VPA and HPA should <strong>not</strong> both target CPU/memory on the same workload. They'll fight each other. If you need both, use HPA with custom metrics and VPA for resource right-sizing.</p>
+</blockquote>
+<h3>VPA Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Off</code></td>
+<td>Only provides recommendations; doesn't change anything</td>
+</tr>
+<tr>
+<td><code>Initial</code></td>
+<td>Sets resources only when pods are first created</td>
+</tr>
+<tr>
+<td><code>Auto</code></td>
+<td>Evicts and recreates pods with updated resources</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Best practice</strong>: Start with <code>Off</code> to see recommendations, then move to <code>Auto</code> once you trust the suggestions.</p>
+<h2>3. Cluster Autoscaler</h2>
+<p>HPA and VPA scale pods. But what if there aren't enough nodes to schedule those pods? The Cluster Autoscaler handles this.</p>
+<div class="diagram-box">
+┌────────────────────────────────────────────────┐
+│               CLUSTER AUTOSCALER               │
+│                                                │
+│  SCALE UP trigger:                             │
+│  Pod is "Pending" because no node has enough   │
+│  resources to schedule it.                     │
+│                                                │
+│  ┌──────┐ ┌──────┐ ┌──────┐                   │
+│  │Node 1│ │Node 2│ │Node 3│  ← All full       │
+│  │[████]│ │[████]│ │[████]│                    │
+│  └──────┘ └──────┘ └──────┘                    │
+│                              ┌──────┐          │
+│  Pending pod ──────────────► │Node 4│ NEW!     │
+│                              │[█   ]│          │
+│                              └──────┘          │
+│                                                │
+│  SCALE DOWN trigger:                           │
+│  Node utilization < 50% for 10+ minutes AND    │
+│  all pods can be rescheduled on other nodes.   │
+└────────────────────────────────────────────────┘
+</div>
+<h3>Cloud Provider Integration</h3>
+<p>The Cluster Autoscaler works with cloud provider node pools:</p>
+<pre><code class="language-yaml"># AKS example: node pool with autoscaling
+az aks nodepool add \
+  --resource-group myRG \
+  --cluster-name myCluster \
+  --name workerpool \
+  --node-count 3 \
+  --min-count 2 \
+  --max-count 20 \
+  --enable-cluster-autoscaler \
+  --node-vm-size Standard_D4s_v3
+</code></pre>
+<h3>Key Configuration Options</h3>
+<pre><code class="language-yaml"># Cluster Autoscaler ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-config
+data:
+  # Wait 10 minutes before removing underutilized nodes
+  scale-down-unneeded-time: &quot;10m&quot;
+  
+  # Node must be below 50% utilization to be considered
+  scale-down-utilization-threshold: &quot;0.5&quot;
+  
+  # Don't scale down if it would remove the last node
+  skip-nodes-with-system-pods: &quot;true&quot;
+  
+  # Maximum time to wait for a node to become ready
+  max-node-provision-time: &quot;15m&quot;
+</code></pre>
+<h2>4. KEDA: Event-Driven Autoscaling</h2>
+<p>KEDA (Kubernetes Event-Driven Autoscaling) is the most flexible option. It scales based on external event sources — message queues, databases, cron schedules, and 60+ other scalers.</p>
+<h3>When KEDA Shines</h3>
+<ul>
+<li><strong>Queue-based workloads</strong>: scale workers based on queue depth</li>
+<li><strong>Event processing</strong>: scale consumers based on event lag</li>
+<li><strong>Scheduled scaling</strong>: scale up before known traffic spikes</li>
+<li><strong>Scale to zero</strong>: shut down completely when there's no work</li>
+</ul>
+<pre><code class="language-yaml">apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-processor
+spec:
+  scaleTargetRef:
+    name: order-processor
+  minReplicaCount: 0     # Scale to zero!
+  maxReplicaCount: 50
+  cooldownPeriod: 60
+  triggers:
+    - type: azure-servicebus
+      metadata:
+        queueName: orders
+        messageCount: &quot;5&quot;  # 1 pod per 5 messages
+        connectionFromEnv: SB_CONNECTION
+    - type: cron
+      metadata:
+        timezone: America/Los_Angeles
+        start: &quot;0 8 * * 1-5&quot;   # 8 AM weekdays
+        end: &quot;0 20 * * 1-5&quot;    # 8 PM weekdays
+        desiredReplicas: &quot;3&quot;   # Pre-warm during business hours
+</code></pre>
+<h3>KEDA Architecture</h3>
+<div class="diagram-box">
+┌──────────────┐     ┌──────────────┐
+│  External    │     │    KEDA      │
+│  Source       │────►│   Metrics    │
+│  (Queue,     │     │   Adapter    │
+│   DB, etc.)  │     └──────┬───────┘
+└──────────────┘            │
+                            ▼
+                    ┌──────────────┐
+                    │     HPA      │
+                    │  (created by │
+                    │   KEDA)      │
+                    └──────┬───────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+         ┌────────┐  ┌────────┐  ┌────────┐
+         │Worker 1│  │Worker 2│  │Worker 3│
+         └────────┘  └────────┘  └────────┘
+</div>
+<p>KEDA creates and manages an HPA under the hood, feeding it with metrics from external sources.</p>
+<h2>Decision Framework</h2>
+<p>Use this flowchart to pick the right autoscaler:</p>
+<div class="diagram-box">
+Is your workload stateless?
+├── YES: Can it be horizontally scaled?
+│   ├── YES: Does it respond to external events?
+│   │   ├── YES ──────────► KEDA
+│   │   └── NO: Is CPU/memory the right metric?
+│   │       ├── YES ──────► HPA (resource metrics)
+│   │       └── NO ───────► HPA (custom metrics)
+│   └── NO ───────────────► VPA
+└── NO ───────────────────► VPA + Manual planning
+<p>Always pair with Cluster Autoscaler for node-level scaling.</p>
+</div>
+<h2>Production Checklist</h2>
+<p>Before going live with autoscaling, verify these items:</p>
+<h3>Resource Requests and Limits</h3>
+<p>Autoscaling only works if your pods have proper resource requests:</p>
+<pre><code class="language-yaml">resources:
+  requests:
+    cpu: 250m       # Used by HPA for calculations
+    memory: 256Mi   # Used by VPA for recommendations
+  limits:
+    cpu: 1000m      # Hard ceiling
+    memory: 512Mi   # OOM-killed if exceeded
+</code></pre>
+<p><strong>Without requests, HPA has nothing to measure.</strong></p>
+<h3>Pod Disruption Budgets</h3>
+<p>Prevent autoscaling from killing too many pods at once:</p>
+<pre><code class="language-yaml">apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-app-pdb
+spec:
+  minAvailable: &quot;75%&quot;
+  selector:
+    matchLabels:
+      app: web-app
+</code></pre>
+<h3>Readiness Probes</h3>
+<p>New pods must only receive traffic when they're actually ready:</p>
+<pre><code class="language-yaml">readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 3
+</code></pre>
+<h3>Monitoring Dashboards</h3>
+<p>Track these metrics:</p>
+<ul>
+<li><strong>Replica count over time</strong> — are you scaling smoothly or oscillating?</li>
+<li><strong>Pod startup time</strong> — slow starts mean scaling can't keep up with traffic spikes</li>
+<li><strong>Pending pods</strong> — if pods are pending, the Cluster Autoscaler might be too slow</li>
+<li><strong>Cost per request</strong> — autoscaling should decrease this number, not increase it</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Setting minReplicas to 1</strong> — no high availability during scale-up delays</li>
+<li><strong>No stabilization window</strong> — causes rapid scaling up and down (thrashing)</li>
+<li><strong>Ignoring pod startup time</strong> — if pods take 60s to start, your scale-up is always 60s too late</li>
+<li><strong>VPA + HPA on same CPU metric</strong> — they conflict and create feedback loops</li>
+<li><strong>Not setting maxReplicas</strong> — a traffic spike could autoscale you into a $50K cloud bill</li>
+</ol>
+<h2>Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Autoscaler</th>
+<th>Scales</th>
+<th>Based On</th>
+<th>Key Config</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HPA</td>
+<td>Pod count</td>
+<td>CPU, memory, custom metrics</td>
+<td><code>behavior</code>, <code>minReplicas</code>, <code>maxReplicas</code></td>
+</tr>
+<tr>
+<td>VPA</td>
+<td>Pod resources</td>
+<td>Historical usage</td>
+<td><code>updateMode</code>, <code>minAllowed</code>, <code>maxAllowed</code></td>
+</tr>
+<tr>
+<td>Cluster Autoscaler</td>
+<td>Node count</td>
+<td>Pending pods</td>
+<td><code>min-count</code>, <code>max-count</code>, provider config</td>
+</tr>
+<tr>
+<td>KEDA</td>
+<td>Pod count (to zero)</td>
+<td>External events</td>
+<td><code>triggers</code>, <code>cooldownPeriod</code></td>
+</tr>
+</tbody>
+</table>
+<p>Start with HPA for stateless web services, add KEDA for event-driven workloads, use VPA for stateful services, and always enable the Cluster Autoscaler. Layer them intentionally, monitor aggressively, and iterate based on real traffic patterns.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

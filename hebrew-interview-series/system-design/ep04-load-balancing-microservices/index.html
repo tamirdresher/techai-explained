@@ -1,0 +1,163 @@
+<h1>Load Balancing ומיקרושירותים</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>כיצד Load Balancer מפזר תעבורה ואלגוריתמים נפוצים</li>
+<li>ההבדל בין Monolith למיקרושירותים — יתרונות וחסרונות</li>
+<li>תפקיד ה-API Gateway בארכיטקטורת מיקרושירותים</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה זה Load Balancer ואיך הוא עובד?</h3>
+<p><strong>תשובה:</strong>
+Load Balancer הוא רכיב שמקבל בקשות נכנסות ומפזר אותן בין מספר שרתי backend. מטרתו למנוע עומס יתר על שרת בודד, לשפר זמינות ולאפשר horizontal scaling.</p>
+<p><strong>שכבות Load Balancing:</strong></p>
+<ol>
+<li><strong>L4 (Transport Layer)</strong> — עובד על TCP/UDP, מהיר מאוד, מפזר לפי IP ו-port בלבד</li>
+<li><strong>L7 (Application Layer)</strong> — מבין HTTP, יכול לנתב לפי URL path, headers, cookies. גמיש יותר אך קצת איטי יותר</li>
+</ol>
+<p><strong>אלגוריתמי פיזור נפוצים:</strong></p>
+<ul>
+<li><strong>Round Robin</strong> — מחלק בקשות ברצף שווה בין השרתים. פשוט אך לא לוקח בחשבון עומס נוכחי</li>
+<li><strong>Weighted Round Robin</strong> — כל שרת מקבל משקל לפי יכולת; שרתים חזקים יותר מקבלים יותר בקשות</li>
+<li><strong>Least Connections</strong> — מנתב לשרת עם הכי פחות חיבורים פעילים. טוב כאשר הבקשות אורכות זמן שונה</li>
+<li><strong>IP Hash</strong> — hash על ה-IP של הלקוח, מבטיח שאותו לקוח תמיד מגיע לאותו שרת (session affinity)</li>
+</ul>
+<p><strong>Health Checks:</strong> Load Balancer בודק תדיר האם שרתים תקינים ומסיר שרתים כושלים מהרוטציה.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Load Balancer עצמו יכול להיות Single Point of Failure — משתמשים בזוג Active-Passive</li>
+<li>Sticky sessions מתאימות לאפליקציות stateful אך מגבילות scaling</li>
+<li>Health checks קריטיים לזיהוי ומסירת שרתים כושלים</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה ההבדל בין Monolith למיקרושירותים?</h3>
+<p><strong>תשובה:</strong>
+<strong>Monolith (מונוליט):</strong> כל לוגיקת האפליקציה ב-codebase אחד, שנבנה ו-deployed כיחידה אחת.</p>
+<p>יתרונות:</p>
+<ul>
+<li>פשוט לפתח ולהריץ locally</li>
+<li>אין latency בין-שירותי (inter-service)</li>
+<li>Debugging קל יותר</li>
+<li>מתאים לצוותים קטנים ו-MVP</li>
+</ul>
+<p>חסרונות:</p>
+<ul>
+<li>Scale כל הכלי גם כאשר רק חלק אחד עמוס</li>
+<li>Deployment של כל שינוי קטן מחייב build ו-deploy מלאים</li>
+<li>קוד נוטה להפוך לספגטי לאורך זמן</li>
+<li>טכנולוגיה אחת לכל הכלי</li>
+</ul>
+<p><strong>Microservices (מיקרושירותים):</strong> מפרקים את האפליקציה לשירותים קטנים ועצמאיים, כל אחד אחראי על domain ספציפי, deployed ו-scaled באופן עצמאי.</p>
+<p>יתרונות:</p>
+<ul>
+<li>Scale עצמאי לכל שירות לפי עומסו</li>
+<li>Deployment עצמאי — אפשר לשחרר פיצ'ר ב-payment service מבלי לגעת ב-user service</li>
+<li>גמישות טכנולוגית — שירות שונה יכול להשתמש בשפה אחרת</li>
+<li>Fault isolation — כשל בשירות אחד לא הורס הכל</li>
+</ul>
+<p>חסרונות:</p>
+<ul>
+<li>מורכבות תפעולית גבוהה (ניהול, monitoring, distributed tracing)</li>
+<li>Network latency בין שירותים</li>
+<li>Distributed transactions קשות</li>
+<li>דורש תרבות DevOps בשלה</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>&quot;Start with a monolith, break to microservices when needed&quot;</li>
+<li>מיקרושירותים מתאימים לצוותים גדולים עם ניסיון DevOps</li>
+<li>הכלל: כל שירות צריך להיות קטן מספיק שיוכל לשכתב אותו תוך שבועיים</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה זה API Gateway ולמה הוא נחוץ?</h3>
+<p><strong>תשובה:</strong>
+API Gateway הוא שכבת ביניים בין הלקוחות (clients) לבין מיקרושירותי הbackend. הוא משמש כ-&quot;single entry point&quot; לכל הבקשות.</p>
+<p><strong>תפקידי API Gateway:</strong></p>
+<ol>
+<li><strong>Routing</strong> — מנתב בקשות לשירות המתאים לפי URL path (/users → user service, /orders → order service)</li>
+<li><strong>Authentication &amp; Authorization</strong> — בודק tokens ומרשה גישה בנקודה מרכזית, כך שכל שירות לא צריך לממש זאת</li>
+<li><strong>Rate Limiting</strong> — מגביל כמות בקשות מלקוח כדי למנוע שימוש לרעה</li>
+<li><strong>Load Balancing</strong> — יכול לפזר בקשות בין instances של אותו שירות</li>
+<li><strong>SSL Termination</strong> — מטפל ב-HTTPS ומעביר HTTP לשירותים הפנימיים</li>
+<li><strong>Request Transformation</strong> — ממיר formats, aggregates תגובות מכמה שירותים ל-response אחד (BFF pattern)</li>
+<li><strong>Caching</strong> — יכול לשמור תשובות נפוצות</li>
+<li><strong>Observability</strong> — logging, metrics, tracing מרכזי</li>
+</ol>
+<p><strong>דוגמאות:</strong> AWS API Gateway, Kong, Nginx, Traefik, Envoy</p>
+<p><strong>BFF Pattern (Backend For Frontend):</strong> יצירת API Gateway ספציפי לסוג לקוח — אחד ל-mobile, אחד ל-web — שמחזיר תשובות מותאמות לכל לקוח.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>API Gateway פותר cross-cutting concerns בנקודה מרכזית</li>
+<li>עלול להפוך ל-bottleneck — חשוב לוודא שהוא scalable</li>
+<li>Circuit breaker pattern מוסיף לו חוסן</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה זה Service Mesh?</h3>
+<p><strong>תשובה:</strong>
+Service Mesh הוא שכבת תשתית ייעודית לניהול תקשורת בין מיקרושירותים. בניגוד ל-API Gateway שמנהל תקשורת north-south (חיצוני→פנימי), service mesh מנהל תקשורת east-west (שירות→שירות).</p>
+<p><strong>כיצד עובד:</strong>
+בכל pod/container מוסיפים sidecar proxy (בדרך כלל Envoy). ה-proxy מיירט את כל התקשורת הנכנסת והיוצאת ומטפל בה.</p>
+<p><strong>יכולות Service Mesh:</strong></p>
+<ul>
+<li><strong>Traffic management</strong> — A/B testing, canary deployments, circuit breaking</li>
+<li><strong>Security</strong> — mTLS בין שירותים, authentication, authorization</li>
+<li><strong>Observability</strong> — distributed tracing, metrics, logging אוטומטי</li>
+<li><strong>Retries &amp; Timeouts</strong> — ניהול automatic retries עם backoff</li>
+</ul>
+<p><strong>דוגמאות:</strong> Istio, Linkerd, Consul Connect</p>
+<p><strong>מתי צריך Service Mesh:</strong></p>
+<ul>
+<li>עשרות מיקרושירותים שמתקשרים ביניהם</li>
+<li>צרכים ברורים ל-mutual TLS, fine-grained traffic control, ו-observability</li>
+<li>הצוות מסוגל לנהל את המורכבות הנוספת</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Service Mesh = &quot;תשתית לניהול east-west traffic&quot;</li>
+<li>מוסיף overhead אך מפחית boilerplate code בשירותים עצמם</li>
+<li>Kubernetes + Istio הוא combination נפוץ</li>
+</ul>
+<hr>
+<h3>שאלה 5: כיצד מתמודדים עם Distributed Transactions במיקרושירותים?</h3>
+<p><strong>תשובה:</strong>
+בארכיטקטורת מיקרושירותים, כאשר פעולה אחת משפיעה על מספר שירותים (למשל: הזמנה שמורידה מלאי, גובה תשלום, ושולחת אימייל), לא ניתן להשתמש ב-ACID transaction רגיל.</p>
+<p><strong>פתרונות:</strong></p>
+<ol>
+<li>
+<p><strong>Two-Phase Commit (2PC):</strong>
+Protocol שמבטיח שכולם מסכימים לבצע או לא לפני ביצוע. מורכב ויוצר blocking — לא מומלץ ב-microservices.</p>
+</li>
+<li>
+<p><strong>Saga Pattern:</strong>
+פירוק ה-transaction למספר local transactions. אם שלב נכשל, מריצים compensating transactions כדי לבטל מה שכבר בוצע.</p>
+</li>
+</ol>
+<ul>
+<li><strong>Choreography-based Saga:</strong> כל שירות מגיב ל-events ושולח events. פשוט אך קשה לעקוב</li>
+<li><strong>Orchestration-based Saga:</strong> orchestrator מרכזי מנהל את ה-flow. ברור יותר אך orchestrator הוא single point</li>
+</ul>
+<ol start="3">
+<li>
+<p><strong>Eventual Consistency:</strong>
+מקבלים שהנתונים יהיו עקביים &quot;בסוף&quot; ולא מיד. המערכת מתוכננת לטפל ב-inconsistencies זמניות.</p>
+</li>
+<li>
+<p><strong>Outbox Pattern:</strong>
+כתיבת ה-event לאותה database transaction כמו השינוי בנתונים, ואז transactional outbox processor שולח ל-message broker. מבטיח exactly-once publishing.</p>
+</li>
+</ol>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>2PC לא מתאים ל-microservices בגלל blocking ומורכבות</li>
+<li>Saga Pattern הוא הגישה המומלצת</li>
+<li>Eventual consistency היא לא כישלון — זו תכונה מכוונת</li>
+</ul>
+<h2>סיכום</h2>
+<p>Load balancing ומיקרושירותים הם אבני יסוד בארכיטקטורת מערכות מודרניות. Load balancer מאפשר scale אופקי ו-high availability. המעבר ממונוליט למיקרושירותים מביא יתרונות ברורים בצמיחה אך דורש הבנה מעמיקה של אתגרים כמו distributed transactions ו-observability. API Gateway הוא הנקודה המרכזית שמנהלת גישה לשירותים ופותר cross-cutting concerns.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Microservices Patterns — Chris Richardson</li>
+<li>Building Microservices — Sam Newman</li>
+<li>NGINX Load Balancing Documentation</li>
+<li>Pattern: Saga (microservices.io)</li>
+</ul>

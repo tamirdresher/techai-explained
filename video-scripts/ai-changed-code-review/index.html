@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How AI Changed Code Review Forever — TechAI Explained</title>
+  <meta name="description" content="A video script exploring how AI-powered code review tools work, what they catch that humans miss, and the emerging best practices for human-AI review collaboration.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 14, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>How AI Changed Code Review Forever</h1>
+    <p class="subtitle">A video script exploring how AI-powered code review tools work, what they catch that humans miss, and the emerging best practices for human-AI review collaboration.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 10 minutes</li>
+<li><strong>Format:</strong> Screen recording demos + narrated explainer with architecture diagrams</li>
+<li><strong>Audience:</strong> Software engineers and engineering leads evaluating AI code review tools</li>
+<li><strong>Thumbnail Concept:</strong> Split PR diff view — left side highlighted by a human reviewer icon, right side highlighted by an AI icon, with different issues found — text &quot;AI Code Review: What Humans Miss&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:00)</h3>
+<p><strong>Hook (0:00 - 0:25)</strong></p>
+<blockquote>
+<p>&quot;In 2024, AI code review was a novelty. In 2026, teams without it are shipping more bugs, slower. But here's the thing — AI doesn't replace human reviewers. It catches an entirely different category of issues. Let me show you what I mean.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> PR diff with two highlight colors — blue for AI-found issues (security vulnerability, missing error handling, performance regression) and green for human-found issues (wrong business logic, poor naming, architectural concern).</p>
+<p><strong>Agenda (0:25 - 1:00)</strong></p>
+<blockquote>
+<p>&quot;We'll cover: What AI code review actually detects vs. what humans catch. How these tools work under the hood — spoiler, it's not just 'send the diff to GPT.' The three deployment models. And the workflow patterns that get the best results from human-AI collaboration.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 1: What AI Catches vs. What Humans Catch (1:00 - 3:00)</h3>
+<p><strong>AI Excels At: (1:00 - 2:00)</strong></p>
+<blockquote>
+<p>&quot;AI reviewers are pattern matchers on steroids. They excel at:&quot;</p>
+</blockquote>
+<ol>
+<li><strong>Security vulnerabilities</strong> — SQL injection, XSS, credential exposure, insecure deserialization</li>
+<li><strong>Bug patterns</strong> — null pointer risks, off-by-one errors, race conditions, resource leaks</li>
+<li><strong>Performance issues</strong> — N+1 queries, unnecessary allocations, missing indexes</li>
+<li><strong>Consistency</strong> — style violations, naming conventions, import ordering</li>
+<li><strong>Missing error handling</strong> — uncaught exceptions, missing null checks, unhandled promise rejections</li>
+</ol>
+<p><strong>Demo:</strong> Show a PR with a subtle SQL injection vulnerability that a human reviewer missed but AI flagged.</p>
+<pre><code class="language-python"># AI catches this in 2 seconds — human reviewers miss it 60% of the time
+def get_user(username):
+    query = f&quot;SELECT * FROM users WHERE name = '{username}'&quot;  # SQL injection!
+    return db.execute(query)
+</code></pre>
+<p><strong>Humans Excel At: (2:00 - 3:00)</strong></p>
+<blockquote>
+<p>&quot;But AI completely misses things that require understanding the BUSINESS:&quot;</p>
+</blockquote>
+<ol>
+<li><strong>Wrong business logic</strong> — the code works, but it doesn't do what the ticket asks</li>
+<li><strong>Architectural concerns</strong> — this feature should be a separate service, not bolted onto the monolith</li>
+<li><strong>Missing requirements</strong> — the ticket says &quot;handle international addresses&quot; but the code only handles US addresses</li>
+<li><strong>Over-engineering</strong> — this simple CRUD operation doesn't need a saga pattern</li>
+<li><strong>Team context</strong> — &quot;we tried this approach last quarter and it caused production incidents&quot;</li>
+</ol>
+<blockquote>
+<p>&quot;AI can tell you if the code is correct. Humans tell you if the code is RIGHT.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Venn diagram showing overlap and unique areas.</p>
+<hr>
+<h3>SECTION 2: How AI Code Review Works Under the Hood (3:00 - 5:30)</h3>
+<p><strong>Architecture (3:00 - 4:00):</strong></p>
+<blockquote>
+<p>&quot;AI code review is NOT just 'paste the diff into ChatGPT.' Production systems use a multi-stage pipeline.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong></p>
+<pre><code>PR Created / Updated
+        │
+        ▼
+┌──────────────────┐
+│  DIFF EXTRACTION │  Parse changed files, understand context
+│  + CONTEXT       │  Load related files, dependency graph
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  STATIC ANALYSIS │  Run linters, type checkers, SAST tools
+│  (Traditional)   │  Catch the easy stuff first
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  AI ANALYSIS     │  LLM reviews with file context
+│  (LLM-powered)   │  Security, logic, performance passes
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  FILTERING       │  Remove duplicates, low-confidence
+│  + RANKING       │  Rank by severity and confidence
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  POST COMMENTS   │  Inline PR comments with explanations
+│  ON PR           │  and suggested fixes
+└──────────────────┘
+</code></pre>
+<p><strong>Context Loading (4:00 - 4:45):</strong></p>
+<blockquote>
+<p>&quot;The secret sauce is context. A naive approach sends just the diff to the LLM. A good system sends the diff PLUS the full files being changed, the related files that import from those files, the test files, and the PR description. Some systems even include recent git history to understand if this is a refactoring or new feature.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show context window filling up — diff (small), full files (medium), related files (large), tests (medium), PR description (small).</p>
+<p><strong>Signal-to-Noise (4:45 - 5:30):</strong></p>
+<blockquote>
+<p>&quot;The biggest challenge is false positives. Early AI review tools commented on everything — style, formatting, variable names. Developers ignored them within a week. The tools that survived learned to only surface HIGH-SIGNAL issues: bugs, security vulnerabilities, and logic errors. Everything else is noise.&quot;</p>
+</blockquote>
+<p><strong>Stats visual:</strong></p>
+<ul>
+<li>2024: Average 15 comments per PR, 3 useful → 20% signal ratio</li>
+<li>2026: Average 3 comments per PR, 2.5 useful → 83% signal ratio</li>
+</ul>
+<blockquote>
+<p>&quot;The best tools today have an 80%+ signal ratio. If more than 1 in 5 comments is noise, developers will stop reading them.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 3: Deployment Models (5:30 - 7:00)</h3>
+<p><strong>Model 1: SaaS (5:30 - 6:00)</strong></p>
+<blockquote>
+<p>&quot;Third-party services like GitHub Copilot code review. Install the app, it reviews every PR automatically. Pros: zero setup, always up to date. Cons: your code leaves your infrastructure.&quot;</p>
+</blockquote>
+<p><strong>Model 2: Self-Hosted (6:00 - 6:30)</strong></p>
+<blockquote>
+<p>&quot;Run the review engine on your own infrastructure with your own LLM. Pros: code stays internal, customizable rules. Cons: you maintain the infrastructure, model updates are your responsibility.&quot;</p>
+</blockquote>
+<p><strong>Model 3: Hybrid (6:30 - 7:00)</strong></p>
+<blockquote>
+<p>&quot;Static analysis runs locally, AI analysis runs in the cloud with the diff only — not the full codebase. This balances security with capability. Most enterprise teams land here.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Three architecture diagrams side by side.</p>
+<p><strong>Key consideration:</strong></p>
+<blockquote>
+<p>&quot;For regulated industries — healthcare, finance, government — the deployment model isn't optional. Code cannot leave the network. Self-hosted or hybrid are the only options.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 4: Best Practices for Human-AI Review (7:00 - 9:00)</h3>
+<p><strong>Practice 1: AI Reviews First (7:00 - 7:30)</strong></p>
+<blockquote>
+<p>&quot;Run AI review before requesting human review. Developers fix the obvious issues — security bugs, missing error handling, style violations — before a human sees the PR. Human reviewers spend their time on architecture, business logic, and design.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Timeline — PR created → AI review (5 min) → Developer fixes → Human review (focused on high-level concerns)</p>
+<p><strong>Practice 2: Calibrate Aggressiveness (7:30 - 8:00)</strong></p>
+<blockquote>
+<p>&quot;Most tools let you configure what they comment on. Start strict and loosen. It's easier to reduce comments than to rebuild trust after developers learn to ignore the tool.&quot;</p>
+</blockquote>
+<p><strong>Configuration example:</strong></p>
+<pre><code class="language-yaml"># .ai-review.yml
+rules:
+  security: error      # Always flag, block merge
+  bugs: warning        # Flag, don't block
+  performance: info    # Comment only on severe issues
+  style: off           # Leave to linters
+</code></pre>
+<p><strong>Practice 3: Track Metrics (8:00 - 8:30)</strong></p>
+<blockquote>
+<p>&quot;Measure what matters:&quot;</p>
+</blockquote>
+<ul>
+<li><strong>True positive rate</strong> — what percentage of AI comments led to code changes?</li>
+<li><strong>Time to merge</strong> — did AI review speed up or slow down the PR lifecycle?</li>
+<li><strong>Bug escape rate</strong> — are fewer bugs reaching production?</li>
+<li><strong>Developer satisfaction</strong> — do developers find the comments helpful?</li>
+</ul>
+<blockquote>
+<p>&quot;If your true positive rate drops below 70%, reconfigure. Developers are ignoring the tool.&quot;</p>
+</blockquote>
+<p><strong>Practice 4: Feedback Loops (8:30 - 9:00)</strong></p>
+<blockquote>
+<p>&quot;The best teams let developers dismiss AI comments with a reason. 'Not applicable,' 'Already handled,' or 'False positive.' This feedback trains the model — or at minimum, helps the team configure better rules.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Show a PR comment being dismissed with feedback, and how that feeds back into the configuration.</p>
+<hr>
+<h3>SECTION 5: What's Next (9:00 - 9:30)</h3>
+<blockquote>
+<p>&quot;Where is AI code review heading?&quot;</p>
+</blockquote>
+<ol>
+<li><strong>PR-level understanding</strong> — reviewing the entire PR as a cohesive change, not file-by-file</li>
+<li><strong>Automatic fixes</strong> — not just comments, but PRs that fix the issues</li>
+<li><strong>Learning from your codebase</strong> — fine-tuned on your patterns, your bugs, your conventions</li>
+<li><strong>Pre-commit review</strong> — AI review in your IDE before you even push</li>
+</ol>
+<blockquote>
+<p>&quot;The end state is an AI that knows your codebase as well as your most senior engineer — and reviews every change with that level of expertise, 24/7, in 30 seconds.&quot;</p>
+</blockquote>
+<hr>
+<h3>OUTRO (9:30 - 10:00)</h3>
+<blockquote>
+<p>&quot;AI code review isn't replacing human reviewers. It's giving them superpowers — handling the mechanical checks so humans can focus on what matters: is this the right solution to the right problem? Subscribe for more deep dives into AI developer tools. See you next week.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> Two suggested video cards.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> GitHub PR interface with AI comments, VS Code with inline AI suggestions, terminal showing CI pipeline</li>
+<li><strong>Graphics:</strong> Architecture diagrams, Venn diagrams, metric charts</li>
+<li><strong>Demo Code:</strong> Use a realistic PR diff (maybe a pre-prepared example repo) — show real AI review comments</li>
+<li><strong>Music:</strong> Subtle ambient, tech documentary style</li>
+<li><strong>Pacing:</strong> Conversational but information-dense — target audience is experienced developers</li>
+<li><strong>SEO Tags:</strong> AI code review, automated code review, GitHub Copilot review, code quality, static analysis, security scanning, developer productivity</li>
+<li><strong>Differentiation:</strong> Most videos on this topic are product demos. This one is architectural and practical — HOW it works and HOW to use it effectively.</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<h1>שיעור 7: Generics ו-Constraints — גמישות עם בטיחות סוגים</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Generics הם אחד הכלים החזקים ב-C# — מאפשרים כתיבת קוד <strong>גמיש</strong> שעובד עם טיפוסים שונים <strong>בלי לוותר על Type Safety</strong>.<br>
+בראיון, הבנה של Generics, Constraints וCovariance/Contravariance מבדילה בין מפתחים.</p>
+<hr>
+<h2>Generic Types בסיסיים</h2>
+<pre><code class="language-csharp">// ❌ ללא Generics — מאבדים type safety
+public class Stack
+{
+    private object[] _items = new object[100];
+    private int _top = 0;
+    
+    public void Push(object item) =&gt; _items[_top++] = item;
+    public object Pop() =&gt; _items[--_top]; // חייבים casting
+}
+
+// ✅ עם Generics — type safe!
+public class Stack&lt;T&gt;
+{
+    private T[] _items = new T[100];
+    private int _top = 0;
+    
+    public void Push(T item) =&gt; _items[_top++] = item;
+    public T Pop() =&gt; _items[--_top]; // ללא casting
+}
+
+// שימוש
+var intStack = new Stack&lt;int&gt;();
+intStack.Push(42);
+int value = intStack.Pop(); // int, לא object
+
+var strStack = new Stack&lt;string&gt;();
+strStack.Push(&quot;Hello&quot;);
+// strStack.Push(42); ❌ — שגיאת compile!
+</code></pre>
+<hr>
+<h2>Generic Methods</h2>
+<pre><code class="language-csharp">public class Utils
+{
+    // Generic method
+    public static T Max&lt;T&gt;(T a, T b) where T : IComparable&lt;T&gt;
+    {
+        return a.CompareTo(b) &gt; 0 ? a : b;
+    }
+    
+    public static void Swap&lt;T&gt;(ref T a, ref T b)
+    {
+        T temp = a;
+        a = b;
+        b = temp;
+    }
+}
+
+int max = Utils.Max(3, 7);       // 7
+string bigger = Utils.Max(&quot;abc&quot;, &quot;xyz&quot;); // &quot;xyz&quot;
+</code></pre>
+<hr>
+<h2>Constraints — הגבלות על Generic Types</h2>
+<h3>where T : class — Reference Type בלבד</h3>
+<pre><code class="language-csharp">public class Repository&lt;T&gt; where T : class
+{
+    public T? FindById(int id) =&gt; null; // T יכול להיות null
+}
+</code></pre>
+<h3>where T : struct — Value Type בלבד</h3>
+<pre><code class="language-csharp">public class ValueHolder&lt;T&gt; where T : struct
+{
+    private T _value;
+    // T לא יכול להיות null
+}
+</code></pre>
+<h3>where T : new() — חייב להיות constructor ריק</h3>
+<pre><code class="language-csharp">public class Factory&lt;T&gt; where T : new()
+{
+    public T Create() =&gt; new T(); // אפשרי כי יש new()
+}
+</code></pre>
+<h3>where T : BaseClass — חייב לירש מ-BaseClass</h3>
+<pre><code class="language-csharp">public class AnimalShelter&lt;T&gt; where T : Animal
+{
+    public void Feed(T animal) =&gt; animal.Eat(); // בטוח!
+}
+</code></pre>
+<h3>where T : IInterface — חייב לממש Interface</h3>
+<pre><code class="language-csharp">public class Printer&lt;T&gt; where T : IPrintable
+{
+    public void Print(T item) =&gt; item.Print();
+}
+</code></pre>
+<h3>Constraint מרובה</h3>
+<pre><code class="language-csharp">public class Manager&lt;T&gt;
+    where T : class, IDisposable, IComparable&lt;T&gt;, new()
+{
+    // T חייב להיות: class, IDisposable, IComparable, ועם new()
+}
+</code></pre>
+<hr>
+<h2>Covariance ו-Contravariance</h2>
+<p>זהו הנושא המתקדם שמפתח בכיר צריך להבין:</p>
+<h3>Covariance — out (יכול להשתמש בתת-סוג)</h3>
+<pre><code class="language-csharp">// IEnumerable&lt;T&gt; is covariant — out T
+IEnumerable&lt;Dog&gt; dogs = new List&lt;Dog&gt;();
+IEnumerable&lt;Animal&gt; animals = dogs; // ✅ אפשרי!
+
+// interface מוגדר כ:
+// public interface IEnumerable&lt;out T&gt;
+</code></pre>
+<h3>Contravariance — in (יכול להשתמש בסוג-אב)</h3>
+<pre><code class="language-csharp">// Action&lt;T&gt; is contravariant — in T
+Action&lt;Animal&gt; feedAnimal = (animal) =&gt; Console.WriteLine(&quot;Feeding&quot;);
+Action&lt;Dog&gt; feedDog = feedAnimal; // ✅ אפשרי!
+
+// interface מוגדר כ:
+// public delegate void Action&lt;in T&gt;(T obj)
+</code></pre>
+<h3>הגדרת Covariance/Contravariance עצמית</h3>
+<pre><code class="language-csharp">// Covariant — רק מחזיר T (out)
+public interface IReader&lt;out T&gt;
+{
+    T Read();
+}
+
+// Contravariant — רק מקבל T (in)
+public interface IWriter&lt;in T&gt;
+{
+    void Write(T value);
+}
+</code></pre>
+<hr>
+<h2>Generic Caching Pattern</h2>
+<pre><code class="language-csharp">public class Cache&lt;TKey, TValue&gt;
+    where TKey : notnull
+    where TValue : class
+{
+    private readonly Dictionary&lt;TKey, TValue&gt; _store = new();
+    
+    public TValue? Get(TKey key)
+        =&gt; _store.TryGetValue(key, out var value) ? value : null;
+    
+    public void Set(TKey key, TValue value)
+        =&gt; _store[key] = value;
+}
+
+var userCache = new Cache&lt;int, User&gt;();
+userCache.Set(1, new User { Id = 1, Name = &quot;Alice&quot; });
+User? user = userCache.Get(1);
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;למה Generics עדיפים על object?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li><strong>Type Safety</strong> בcompile-time</li>
+<li><strong>ביצועים:</strong> ללא boxing/unboxing עבור Value Types</li>
+<li><strong>קריאות:</strong> קוד ברור יותר</li>
+</ul>
+<h3>שאלה 2: &quot;מה הוא Covariance?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> Covariance מאפשר להשתמש ב-<code>IEnumerable&lt;Dog&gt;</code> כ-<code>IEnumerable&lt;Animal&gt;</code> — תת-סוג במקום סוג-אב. מסומן עם <code>out</code>.</p>
+<h3>שאלה 3: &quot;מה ההבדל בין <code>where T : class</code> לבין <code>where T : struct</code>?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> <code>class</code> מגביל ל-Reference Types ומאפשר null. <code>struct</code> מגביל ל-Value Types ומונע null.</p>
+<hr>
+<h2>סיכום Constraints</h2>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>משמעות</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>where T : class</code></td>
+<td>Reference Type</td>
+</tr>
+<tr>
+<td><code>where T : struct</code></td>
+<td>Value Type</td>
+</tr>
+<tr>
+<td><code>where T : new()</code></td>
+<td>Constructor ריק</td>
+</tr>
+<tr>
+<td><code>where T : BaseClass</code></td>
+<td>יורש מ-BaseClass</td>
+</tr>
+<tr>
+<td><code>where T : IInterface</code></td>
+<td>מממש Interface</td>
+</tr>
+<tr>
+<td><code>where T : notnull</code></td>
+<td>לא null</td>
+</tr>
+<tr>
+<td><code>out T</code></td>
+<td>Covariant</td>
+</tr>
+<tr>
+<td><code>in T</code></td>
+<td>Contravariant</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 7 מתוך 10</em></p>

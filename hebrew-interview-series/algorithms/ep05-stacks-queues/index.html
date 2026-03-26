@@ -1,0 +1,156 @@
+<h1>שיעור 5: Stacks ו-Queues — מבני נתונים ושימושים</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Stack וQueue הם מבני נתונים בסיסיים עם שימושים עצומים — parsing, BFS/DFS, undo/redo.<br>
+בשיעור זה נכסה את המבנים, היישומים ושאלות ראיון קלאסיות.</p>
+<hr>
+<h2>Stack — LIFO</h2>
+<pre><code class="language-csharp">// מימוש עם Stack&lt;T&gt; מ-.NET
+var stack = new Stack&lt;int&gt;();
+stack.Push(1);  // [1]
+stack.Push(2);  // [1, 2]
+stack.Push(3);  // [1, 2, 3]
+
+int top = stack.Peek();  // 3 — ללא הסרה
+int val = stack.Pop();   // 3 — עם הסרה
+// [1, 2]
+
+// מימוש ידני עם LinkedList
+public class MyStack&lt;T&gt;
+{
+    private readonly LinkedList&lt;T&gt; _list = new();
+    
+    public void Push(T item) =&gt; _list.AddLast(item);
+    public T Pop() 
+    {
+        var val = _list.Last!.Value;
+        _list.RemoveLast();
+        return val;
+    }
+    public T Peek() =&gt; _list.Last!.Value;
+    public bool IsEmpty =&gt; _list.Count == 0;
+}
+</code></pre>
+<hr>
+<h2>Queue — FIFO</h2>
+<pre><code class="language-csharp">var queue = new Queue&lt;int&gt;();
+queue.Enqueue(1); // [1]
+queue.Enqueue(2); // [1, 2]
+queue.Enqueue(3); // [1, 2, 3]
+
+int front = queue.Peek();    // 1 — ללא הסרה
+int val = queue.Dequeue();   // 1 — עם הסרה
+// [2, 3]
+</code></pre>
+<hr>
+<h2>Valid Parentheses — Stack קלאסי</h2>
+<pre><code class="language-csharp">bool IsValid(string s)
+{
+    var stack = new Stack&lt;char&gt;();
+    var matching = new Dictionary&lt;char, char&gt;
+    {
+        { ')', '(' }, { ']', '[' }, { '}', '{' }
+    };
+    
+    foreach (char c in s)
+    {
+        if (&quot;([{&quot;.Contains(c))
+        {
+            stack.Push(c);
+        }
+        else if (matching.ContainsKey(c))
+        {
+            if (stack.Count == 0 || stack.Pop() != matching[c])
+                return false;
+        }
+    }
+    return stack.Count == 0; // O(n)
+}
+</code></pre>
+<hr>
+<h2>Monotonic Stack — שאלות מתקדמות</h2>
+<pre><code class="language-csharp">// Next Greater Element
+int[] NextGreaterElement(int[] arr)
+{
+    int n = arr.Length;
+    var result = new int[n];
+    Array.Fill(result, -1);
+    var stack = new Stack&lt;int&gt;(); // שומר indices
+    
+    for (int i = 0; i &lt; n; i++)
+    {
+        while (stack.Count &gt; 0 &amp;&amp; arr[stack.Peek()] &lt; arr[i])
+        {
+            result[stack.Pop()] = arr[i];
+        }
+        stack.Push(i);
+    }
+    return result; // O(n)
+}
+// arr = [2,1,2,4,3] → [4,2,4,-1,-1]
+</code></pre>
+<hr>
+<h2>Min Stack</h2>
+<pre><code class="language-csharp">public class MinStack
+{
+    private readonly Stack&lt;int&gt; _stack = new();
+    private readonly Stack&lt;int&gt; _minStack = new();
+    
+    public void Push(int val)
+    {
+        _stack.Push(val);
+        int min = _minStack.Count == 0 ? val : Math.Min(val, _minStack.Peek());
+        _minStack.Push(min);
+    }
+    
+    public void Pop()
+    {
+        _stack.Pop();
+        _minStack.Pop();
+    }
+    
+    public int Top() =&gt; _stack.Peek();
+    public int GetMin() =&gt; _minStack.Peek(); // O(1)!
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה ההבדל בין Stack ל-Queue?&quot;</h3>
+<p><strong>תשובה:</strong> Stack הוא LIFO (Last In First Out) — כמו ערימת צלחות. Queue הוא FIFO (First In First Out) — כמו תור.</p>
+<h3>שאלה 2: &quot;מה הוא Monotonic Stack?&quot;</h3>
+<p><strong>תשובה:</strong> Stack שמנהל סדר מונוטוני (עולה/יורד). שימושי לבעיות &quot;Next Greater Element&quot;, &quot;Largest Rectangle in Histogram&quot;.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>מבנה</th>
+<th>הכנסה</th>
+<th>הוצאה</th>
+<th>שימוש</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stack</td>
+<td>Push O(1)</td>
+<td>Pop O(1)</td>
+<td>DFS, Parentheses</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Enqueue O(1)</td>
+<td>Dequeue O(1)</td>
+<td>BFS, Scheduling</td>
+</tr>
+<tr>
+<td>Deque</td>
+<td>O(1) משני צדדים</td>
+<td>O(1)</td>
+<td>Sliding Window Max</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 5 מתוך 10</em></p>

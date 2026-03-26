@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 5: Production Readiness — Health Checks, Resource Limits, and PDBs — TechAI Explained</title>
+  <meta name="description" content="The final checklist before deploying to production — readiness probes, liveness probes, resource requests and limits, Pod Disruption Budgets, and graceful shutdown.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Kubernetes Course</span>
+      <time>March 4, 2026</time>
+      <span class="read-time">15 min read</span>
+    </div>
+    <h1>Lesson 5: Production Readiness — Health Checks, Resource Limits, and PDBs</h1>
+    <p class="subtitle">The final checklist before deploying to production — readiness probes, liveness probes, resource requests and limits, Pod Disruption Budgets, and graceful shutdown.</p>
+  </header>
+  <div class="article-body">
+    <p>Your app works on Kubernetes. But is it production-ready? This lesson covers the five configurations that separate &quot;it runs&quot; from &quot;it survives real traffic, node failures, and cluster upgrades without dropping requests.&quot;</p>
+<h2>Health Checks: Probes</h2>
+<p>Kubernetes uses probes to know whether your Pod is alive and whether it should receive traffic.</p>
+<h3>Readiness Probe: &quot;Can this Pod handle requests?&quot;</h3>
+<p>If the readiness probe fails, the Pod is removed from the Service's endpoints. Traffic stops flowing to it, but the Pod keeps running.</p>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      readinessProbe:
+        httpGet:
+          path: /health/ready
+          port: 8080
+        initialDelaySeconds: 5     # Wait 5s before first check
+        periodSeconds: 10          # Check every 10s
+        failureThreshold: 3        # 3 failures = not ready
+        successThreshold: 1        # 1 success = ready again
+</code></pre>
+<p><strong>Use for:</strong> checking that your app is fully initialized — database connections established, caches warmed, configuration loaded.</p>
+<h3>Liveness Probe: &quot;Is this Pod alive?&quot;</h3>
+<p>If the liveness probe fails, Kubernetes <strong>kills and restarts</strong> the Pod.</p>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      livenessProbe:
+        httpGet:
+          path: /health/live
+          port: 8080
+        initialDelaySeconds: 15    # Give app time to start
+        periodSeconds: 20          # Check every 20s
+        failureThreshold: 3        # 3 failures = restart Pod
+        timeoutSeconds: 5          # Max time per check
+</code></pre>
+<p><strong>Use for:</strong> detecting deadlocks, infinite loops, or corrupted state that only a restart can fix.</p>
+<h3>Startup Probe: &quot;Has this Pod finished starting?&quot;</h3>
+<p>For slow-starting apps, the startup probe prevents liveness kills during initialization.</p>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      startupProbe:
+        httpGet:
+          path: /health/live
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 30      # 30 × 5s = 150s max startup time
+</code></pre>
+<p>While the startup probe is checking, liveness and readiness probes are disabled. Once the startup probe succeeds, they activate.</p>
+<div class="diagram-box">
+PROBE DECISION FLOW
+<p>Pod starts
+│
+▼
+Startup Probe ──── Failing ──► Keep waiting (up to failureThreshold)
+│                              │
+│ Passes                       ▼ Exceeded
+▼                           Kill and restart Pod
+Liveness Probe ◄─── active
+│
+│ Passes              Fails
+▼                       ▼
+Readiness Probe        Kill and restart Pod
+│
+│ Passes              Fails
+▼                       ▼
+Receives traffic       Removed from Service
+(no traffic, but Pod lives)</p>
+</div>
+<h3>Health Check Endpoints</h3>
+<pre><code class="language-typescript">// Express health endpoints
+app.get('/health/live', (req, res) =&gt; {
+  // Liveness: is the process alive and not deadlocked?
+  res.status(200).json({ status: 'alive' });
+});
+
+app.get('/health/ready', async (req, res) =&gt; {
+  // Readiness: can we handle requests right now?
+  try {
+    await db.query('SELECT 1');           // DB connection works
+    await redis.ping();                    // Cache is reachable
+    res.status(200).json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'not ready', error: err.message });
+  }
+});
+</code></pre>
+<p><strong>Critical rule:</strong> Liveness checks should be cheap and local. Never make a liveness probe depend on external services — if the database is down, you don't want Kubernetes restarting every Pod.</p>
+<h2>Resource Requests and Limits</h2>
+<p>Requests and limits control how much CPU and memory your Pods use.</p>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      resources:
+        requests:
+          cpu: 250m          # 0.25 CPU cores (guaranteed minimum)
+          memory: 256Mi      # 256 MB RAM (guaranteed minimum)
+        limits:
+          cpu: 1000m         # 1.0 CPU cores (hard ceiling)
+          memory: 512Mi      # 512 MB RAM (OOM-killed if exceeded)
+</code></pre>
+<h3>How They Work</h3>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Request</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CPU</strong></td>
+<td>Guaranteed minimum. Used for scheduling.</td>
+<td>Hard cap. Pod is throttled, never killed.</td>
+</tr>
+<tr>
+<td><strong>Memory</strong></td>
+<td>Guaranteed minimum. Used for scheduling.</td>
+<td>Hard cap. Pod is <strong>OOM-killed</strong> if exceeded.</td>
+</tr>
+</tbody>
+</table>
+<div class="diagram-box">
+RESOURCE REQUESTS vs LIMITS
+<p>CPU (soft limit):
+├── Request (250m): guaranteed, used for scheduling
+├── Burstable: Pod can use up to Limit when available
+└── Limit (1000m): throttled if exceeded (NOT killed)</p>
+<p>Memory (hard limit):
+├── Request (256Mi): guaranteed, used for scheduling
+└── Limit (512Mi): OOM-KILLED if exceeded ☠️
+(no warning, no graceful shutdown)</p>
+</div>
+<h3>Choosing the Right Values</h3>
+<ol>
+<li><strong>Run your app under load</strong> and observe actual CPU/memory usage</li>
+<li><strong>Set requests</strong> to the P50 (typical) usage</li>
+<li><strong>Set limits</strong> to 2-4× the request (room for spikes)</li>
+<li><strong>Never set memory limit == request</strong> — leaves no room for garbage collection spikes</li>
+</ol>
+<p><strong>A starting template:</strong></p>
+<pre><code class="language-yaml"># Web API (moderate traffic)
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Background worker (CPU-intensive)
+resources:
+  requests:
+    cpu: 500m
+    memory: 256Mi
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+
+# Database (memory-intensive)
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+</code></pre>
+<h3>Why Requests Matter for Scheduling</h3>
+<p>Kubernetes uses <strong>requests</strong> (not limits) to decide which node to place a Pod on. If you don't set requests:</p>
+<ul>
+<li>The scheduler assumes the Pod needs 0 CPU and 0 memory</li>
+<li>It packs Pods onto already-full nodes</li>
+<li>Nodes become overcommitted → everything slows down or gets OOM-killed</li>
+</ul>
+<p><strong>Always set requests.</strong> They're not optional for production.</p>
+<h2>Pod Disruption Budgets (PDBs)</h2>
+<p>During cluster upgrades, node maintenance, or autoscaling, Kubernetes needs to evict Pods. A <strong>PodDisruptionBudget</strong> limits how many Pods can be evicted simultaneously.</p>
+<pre><code class="language-yaml">apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 2              # At least 2 Pods must stay running
+  selector:
+    matchLabels:
+      app: my-api
+</code></pre>
+<p>Alternative — use percentage:</p>
+<pre><code class="language-yaml">spec:
+  maxUnavailable: &quot;25%&quot;        # At most 25% of Pods can be down
+  selector:
+    matchLabels:
+      app: my-api
+</code></pre>
+<h3>How PDBs Work</h3>
+<div class="diagram-box">
+SCENARIO: Cluster upgrade, node is draining
+<p>WITHOUT PDB:
+Node being drained has 3 of your 4 Pods
+All 3 evicted simultaneously → only 1 Pod handles all traffic
+→ Requests drop, latency spikes</p>
+<p>WITH PDB (minAvailable: 2):
+Kubernetes evicts 1 Pod → waits for replacement to start
+Then evicts next Pod → waits for replacement
+At least 2 Pods always handle traffic → no disruption</p>
+</div>
+<p><strong>Rule of thumb:</strong> <code>minAvailable</code> should be at least <code>replicas - 1</code>. For 3 replicas, set <code>minAvailable: 2</code>.</p>
+<h2>Graceful Shutdown</h2>
+<p>When Kubernetes kills a Pod, it sends SIGTERM and waits (default 30 seconds) before sending SIGKILL. Your app must handle SIGTERM properly.</p>
+<pre><code class="language-typescript">// Express graceful shutdown
+const server = app.listen(8080);
+
+process.on('SIGTERM', () =&gt; {
+  console.log('SIGTERM received, shutting down gracefully...');
+
+  // Stop accepting new connections
+  server.close(() =&gt; {
+    console.log('HTTP server closed');
+
+    // Close database connections
+    db.end().then(() =&gt; {
+      console.log('Database connections closed');
+      process.exit(0);
+    });
+  });
+
+  // Force shutdown after 25s (before K8s sends SIGKILL at 30s)
+  setTimeout(() =&gt; {
+    console.error('Forced shutdown');
+    process.exit(1);
+  }, 25000);
+});
+</code></pre>
+<h3>Graceful Shutdown Sequence</h3>
+<div class="diagram-box">
+KUBERNETES POD TERMINATION
+<ol>
+<li>Pod marked for termination</li>
+<li>Pod removed from Service endpoints (no new traffic)</li>
+<li>preStop hook runs (if configured)</li>
+<li>SIGTERM sent to container</li>
+<li>App handles SIGTERM:
+<ul>
+<li>Stops accepting new connections</li>
+<li>Finishes in-flight requests</li>
+<li>Closes database connections</li>
+<li>Exits cleanly</li>
+</ul>
+</li>
+<li>If still running after terminationGracePeriodSeconds (default 30s):
+SIGKILL sent (forced kill, no cleanup)</li>
+</ol>
+</div>
+<p>For apps that need more than 30 seconds:</p>
+<pre><code class="language-yaml">spec:
+  terminationGracePeriodSeconds: 60   # Give 60s instead of 30s
+  containers:
+    - name: api
+      lifecycle:
+        preStop:
+          exec:
+            command: [&quot;sh&quot;, &quot;-c&quot;, &quot;sleep 5&quot;]  # Wait for endpoints to update
+</code></pre>
+<p>The <code>preStop</code> sleep gives the Service time to remove the Pod from its endpoints before the app starts rejecting connections.</p>
+<h2>Production Readiness Checklist</h2>
+<pre><code class="language-yaml"># Complete production-ready Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-api
+  namespace: production
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0          # Zero-downtime deploys
+  selector:
+    matchLabels:
+      app: my-api
+  template:
+    metadata:
+      labels:
+        app: my-api
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: api
+          image: my-registry/my-api:1.2.0
+          ports:
+            - containerPort: 8080
+
+          # Resource management
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+
+          # Health checks
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            periodSeconds: 15
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+
+          # Graceful shutdown
+          lifecycle:
+            preStop:
+              exec:
+                command: [&quot;sh&quot;, &quot;-c&quot;, &quot;sleep 5&quot;]
+
+          # Environment from ConfigMap and Secret
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: api-secrets
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: my-api
+</code></pre>
+<h2>Key Takeaways</h2>
+<ol>
+<li><strong>Readiness probes</strong> control traffic routing — use for dependency checks</li>
+<li><strong>Liveness probes</strong> trigger restarts — keep them simple and local</li>
+<li><strong>Startup probes</strong> protect slow-starting apps from premature kills</li>
+<li><strong>Resource requests</strong> are for scheduling — always set them</li>
+<li><strong>Resource limits</strong> are hard caps — memory exceeding limits means OOM-kill</li>
+<li><strong>PDBs</strong> prevent mass evictions during maintenance</li>
+<li><strong>Graceful shutdown</strong> means handling SIGTERM and draining connections</li>
+</ol>
+<p><strong>Congratulations!</strong> You've completed the Kubernetes for Application Developers course. You now know the five resource categories that matter most: Pods/Deployments/Services, ConfigMaps/Secrets, Persistent Storage, Networking, and Production Readiness.</p>
+<p>← <a href="/courses/kubernetes-for-app-devs/04-networking-ingress/">Lesson 4: Networking</a> | <a href="/courses/kubernetes-for-app-devs/">Back to Course Index</a></p>
+<p><em>Part of the Kubernetes for Application Developers course by the TechAI Explained Team.</em></p>
+<hr>
+<div style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+<h3 style="color:#58a6ff;margin:0 0 0.5rem;">🔒 Premium Content Coming Soon</h3>
+<p style="color:#c9d1d9;margin:0 0 0.5rem;">The <strong>full extended version</strong> of this lesson includes advanced production hardening labs, auto-scaling configurations, real-world incident response playbooks, and a complete production readiness checklist tool.</p>
+<p style="color:#c9d1d9;margin:0 0 1rem;">Available soon as part of the <strong>Kubernetes for App Devs — Extended Edition</strong>.</p>
+<p style="margin:0;"><a href="/sponsor/">💝 Become a sponsor</a> to get early access.</p>
+</div>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

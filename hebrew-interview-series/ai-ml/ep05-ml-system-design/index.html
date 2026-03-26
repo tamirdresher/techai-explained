@@ -1,0 +1,245 @@
+<h1>עיצוב מערכות ML — Feature Stores, Model Serving ו-A/B Testing</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>ארכיטקטורת ML system: מ-data collection ועד production</li>
+<li>Feature stores ומדוע הם קריטיים לאחידות features</li>
+<li>A/B testing ו-shadow mode לפריסה בטוחה של מודלים</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה זה ML System Design ומה הוא כולל?</h3>
+<p><strong>תשובה:</strong>
+ML System Design הוא תכנון כלל המערכת שמאפשרת ל-ML model לפעול ב-production, כולל איסוף נתונים, אימון, הגשת תחזיות, ניטור ועוד.</p>
+<p><strong>רכיבי ML System:</strong></p>
+<ol>
+<li>
+<p><strong>Data Collection &amp; Storage:</strong></p>
+<ul>
+<li>Raw data מגיע ממקורות שונים (logs, events, APIs)</li>
+<li>Data Lake לאחסון גולמי (S3, GCS)</li>
+<li>Data Warehouse לנתונים מעובדים (BigQuery, Snowflake)</li>
+</ul>
+</li>
+<li>
+<p><strong>Feature Engineering:</strong></p>
+<ul>
+<li>Feature pipeline: עיבוד נתונים גולמיים ל-features מוכנים לאימון</li>
+<li>Feature Store לשיתוף ועקביות features</li>
+</ul>
+</li>
+<li>
+<p><strong>Model Training:</strong></p>
+<ul>
+<li>Training pipeline: נתונים → model artifacts</li>
+<li>Experiment tracking (MLflow, W&amp;B)</li>
+<li>Hyperparameter tuning</li>
+</ul>
+</li>
+<li>
+<p><strong>Model Registry:</strong></p>
+<ul>
+<li>גרסאות מודלים, metadata, lineage</li>
+<li>MLflow Model Registry, Weights &amp; Biases</li>
+</ul>
+</li>
+<li>
+<p><strong>Model Serving:</strong></p>
+<ul>
+<li>Online (real-time): REST/gRPC API</li>
+<li>Batch: עיבוד מסיבי תקופתי</li>
+<li>Edge: הרצה על device</li>
+</ul>
+</li>
+<li>
+<p><strong>Monitoring:</strong></p>
+<ul>
+<li>Data drift, model performance degradation</li>
+<li>Alerting, retraining triggers</li>
+</ul>
+</li>
+</ol>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>ML system הוא הרבה יותר מהמודל עצמו — 80%+ מהעבודה היא infrastructure</li>
+<li>Google's ML Technical Debt paper: &quot;hidden technical debt in ML systems&quot;</li>
+<li>MLOps = DevOps ל-ML systems</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה Feature Store ולמה הוא חשוב?</h3>
+<p><strong>תשובה:</strong>
+Feature Store הוא מערכת מרכזית לניהול, אחסון ושיתוף features בין מודלים שונים.</p>
+<p><strong>הבעיה שהוא פותר:</strong>
+בלי feature store, כל data scientist מכין features בנפרד. מביא לבעיות:</p>
+<ul>
+<li><strong>Training-Serving Skew:</strong> features מחושבים אחרת ב-training מאשר ב-serving → drops in performance</li>
+<li><strong>Feature duplication:</strong> 5 צוותים מחשבים &quot;user activity in last 7 days&quot; בדרכים שונות</li>
+<li><strong>Latency:</strong> חישוב features on-the-fly ב-real-time inference יכול להיות איטי</li>
+<li><strong>Data leakage:</strong> שימוש בנתוני עתיד באימון בשוגג</li>
+</ul>
+<p><strong>ארכיטקטורת Feature Store:</strong></p>
+<p><strong>Offline Store:</strong></p>
+<ul>
+<li>לאימון: snapshots היסטוריים של features</li>
+<li>בדרך כלל: Parquet files ב-S3, Delta Lake, BigQuery</li>
+<li>Point-in-time correct retrieval — חשוב למנוע data leakage</li>
+</ul>
+<p><strong>Online Store:</strong></p>
+<ul>
+<li>ל-inference ב-real-time: low-latency feature lookup</li>
+<li>בדרך כלל: Redis, DynamoDB, Cassandra</li>
+<li>Feature values נכתבים מה-offline store ב-materialization process</li>
+</ul>
+<p><strong>Feature Pipeline:</strong>
+עיבוד נתונים גולמיים ל-features → אחסון ב-offline ו-online store</p>
+<p><strong>דוגמאות Feature Stores:</strong> Feast (open-source), Tecton, Hopsworks, Vertex AI Feature Store</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Feature Store = consistency בין training לserving</li>
+<li>Online + Offline = שתי מטרות שונות (latency vs history)</li>
+<li>Point-in-time correctness חיונית למניעת data leakage</li>
+</ul>
+<hr>
+<h3>שאלה 3: מהם דרכי ה-Model Serving השונות?</h3>
+<p><strong>תשובה:</strong>
+<strong>Online Serving (Real-time Inference):</strong></p>
+<ul>
+<li>Model כ-REST/gRPC API, מגיב לבקשות בodot real-time</li>
+<li>Latency requirements: 10-100ms</li>
+<li>שיקולים: autoscaling, hardware (GPU vs CPU), caching</li>
+</ul>
+<p><strong>Batch Serving:</strong></p>
+<ul>
+<li>הרצת מודל על קבוצות גדולות של נתונים בתזמון תקופתי</li>
+<li>Latency לא קריטי (שעות)</li>
+<li>Use cases: daily recommendations, risk scoring, churn prediction</li>
+<li>כלים: Spark, Beam, AWS Batch</li>
+</ul>
+<p><strong>Streaming Serving:</strong></p>
+<ul>
+<li>Inference על data stream (Kafka, Kinesis) בזמן אמת</li>
+<li>Use cases: fraud detection, real-time recommendations</li>
+<li>כלים: Flink, Kafka Streams</li>
+</ul>
+<p><strong>Edge Serving:</strong></p>
+<ul>
+<li>הרצת מודל על device (מובייל, IoT) ללא שרת</li>
+<li>מצריך model compression: quantization, pruning, distillation</li>
+<li>שיקול: privacy (נתונים לא עוזבים ה-device), low latency, offline capability</li>
+<li>כלים: TensorFlow Lite, Core ML, ONNX Runtime</li>
+</ul>
+<p><strong>Serving Infrastructure:</strong></p>
+<ul>
+<li><strong>TensorFlow Serving:</strong> ייעודי ל-TF models, gRPC + REST</li>
+<li><strong>Torchserve:</strong> ל-PyTorch</li>
+<li><strong>Triton Inference Server (NVIDIA):</strong> רב-framework, GPU optimization</li>
+<li><strong>Ray Serve:</strong> Python-native, distributed</li>
+<li><strong>KServe:</strong> Kubernetes-native ML serving</li>
+</ul>
+<p><strong>Model Optimization לatency:</strong></p>
+<ul>
+<li>Quantization: FP32 → INT8 → מהיר יותר, קצת פחות דיוק</li>
+<li>Distillation: מודל גדול מלמד מודל קטן</li>
+<li>ONNX: export לformat universal</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Online vs Batch → tradeoff latency vs cost</li>
+<li>GPU serving יקר — בדוק אם CPU מספיק (טרנספורמרים קטנים)</li>
+<li>Model versioning ב-serving חשובה להצגת גרסאות שונות במקביל</li>
+</ul>
+<hr>
+<h3>שאלה 4: כיצד מבצעים A/B Testing למודלי ML?</h3>
+<p><strong>תשובה:</strong>
+A/B Testing ב-ML הוא שיטה לבדיקה אמפירית האם מודל חדש טוב יותר ממה שקיים ב-production.</p>
+<p><strong>מדוע A/B ולא offline evaluation?</strong>
+Offline metrics (AUC, RMSE) לא תמיד מתורגמות ל-business metrics. מודל שמשפר CTR ב-offline יכול להשפיע שלילית על retention. A/B testing מודד impact אמיתי.</p>
+<p><strong>ה-setup:</strong></p>
+<ul>
+<li><strong>Control (A):</strong> המודל הנוכחי (baseline)</li>
+<li><strong>Treatment (B):</strong> המודל החדש</li>
+<li>מחלקים users אקראית: 90% קבלו A, 10% קבלו B</li>
+<li>מודדים business metrics: conversion, engagement, revenue</li>
+</ul>
+<p><strong>שיקולים חשובים:</strong></p>
+<ol>
+<li><strong>Sample Size:</strong> חישוב הספק סטטיסטי לפני תחילת הניסוי — כמה users צריך לראות הbehavior?</li>
+<li><strong>Duration:</strong> הניסוי צריך לרוץ מספיק זמן לללכוד weekly patterns</li>
+<li><strong>Novelty Effect:</strong> users אוהבים דברים חדשים — מצב זמני שעשוי להיראות כהצלחה</li>
+<li><strong>Network Effects:</strong> אם A ו-B משפיעים זה על זה (social network) — isolation קשה</li>
+<li><strong>Multiple Metrics:</strong> הגדר primary metric ו-guardrail metrics (לא להשפיע לרעה)</li>
+</ol>
+<p><strong>Shadow Mode (Shadow Testing):</strong></p>
+<ul>
+<li>המודל החדש רץ במקביל למודל הישן</li>
+<li>ה-serving מבוסס על המודל הישן בלבד</li>
+<li>הפלטים של המודל החדש מתועדים להשוואה בלבד</li>
+<li><strong>יתרון:</strong> אין risk לusers, אפשר לבדוק latency, errors</li>
+</ul>
+<p><strong>Canary Deployment:</strong></p>
+<ul>
+<li>1-5% מה-traffic הולך למודל החדש</li>
+<li>מזהים בעיות לפני rollout מלא</li>
+<li>מוגדר thresholds לrollback אוטומטי</li>
+</ul>
+<p><strong>Multi-armed Bandit:</strong>
+במקום split סטטי, allocate traffic דינמי לפי performance — variant טוב יותר מקבל יותר traffic.
+יתרון: מינימום regret. חסרון: מורכב יותר לניתוח.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>A/B testing חיוני לvalidate שיפור offline metrics = שיפור real-world</li>
+<li>תמיד חשב sample size לפני תחילת הניסוי</li>
+<li>Shadow mode ל-risky models; canary ל-gradual rollout</li>
+</ul>
+<hr>
+<h3>שאלה 5: כיצד מזהים ומתמודדים עם Model Drift?</h3>
+<p><strong>תשובה:</strong>
+Model Drift הוא תופעה שבה ביצועי המודל ב-production מתדרדרים לאורך זמן. יש שני סוגים עיקריים:</p>
+<p><strong>Data Drift:</strong>
+התפלגות נתוני הקלט משתנה ביחס לנתוני האימון.</p>
+<ul>
+<li>דוגמה: מודל credit scoring שאומן ב-2019 — patterns של התנהגות כלכלית השתנו אחרי COVID</li>
+<li>זיהוי: Statistical tests (Kolmogorov-Smirnov, Jensen-Shannon divergence) על feature distributions</li>
+</ul>
+<p><strong>Concept Drift:</strong>
+הקשר בין features ל-target משתנה.</p>
+<ul>
+<li>דוגמה: מודל spam detection — spammers מסתגלים לפילטרים</li>
+<li>קשה יותר לזיהוי כי דורש labels עדכניים</li>
+</ul>
+<p><strong>Monitoring בpractice:</strong></p>
+<ol>
+<li>
+<p><strong>Input Monitoring:</strong> מדד statistics של features (mean, std, distribution) ובדוק drift מהנתונים ההיסטוריים</p>
+</li>
+<li>
+<p><strong>Prediction Monitoring:</strong> מדד distribution של פלטי המודל — שינוי פתאומי ב-prediction distribution = red flag</p>
+</li>
+<li>
+<p><strong>Performance Monitoring:</strong> אם יש labels מוגדרים (feedback loop), עקוב אחרי metrics בזמן אמת</p>
+</li>
+<li>
+<p><strong>Alerting:</strong> הגדר thresholds, alert כאשר עוברים אותם</p>
+</li>
+</ol>
+<p><strong>כלים:</strong> Evidently AI, WhyLabs, Arize, Datadog ML</p>
+<p><strong>Retraining Strategies:</strong></p>
+<ul>
+<li><strong>Scheduled:</strong> אחזור תקופתי (weekly, monthly)</li>
+<li><strong>Triggered:</strong> כשpearformance מתחת ל-threshold</li>
+<li><strong>Continuous:</strong> pipeline שמוסיף נתונים חדשים לאימון כל הזמן</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Monitoring הוא לא אופציה ב-production ML</li>
+<li>Data drift קל יותר לזיהוי מ-concept drift</li>
+<li>Feedback loop חיוני: ניתן לאמן מחדש רק אם יש labels עדכניים</li>
+</ul>
+<h2>סיכום</h2>
+<p>ML System Design הוא הפגישה בין data science להנדסת תוכנה בסדר גודל גדול. Feature stores, model serving, A/B testing ו-drift monitoring הם ה-building blocks של כל ML system production-grade. בראיון, הראה שאתה מבין שמודל הוא רק 20% מהעבודה — ה-80% הנשאר הוא infrastructure, pipelines ו-monitoring.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Designing Machine Learning Systems — Chip Huyen</li>
+<li>Machine Learning Engineering — Andriy Burkov</li>
+<li>MLOps Guide — Google Cloud</li>
+<li>Made With ML (madewithml.com)</li>
+</ul>

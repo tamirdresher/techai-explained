@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Internal Developer Platforms with Backstage — TechAI Explained</title>
+  <meta name="description" content="A practical guide to setting up Backstage as your Internal Developer Portal — software catalog, scaffolding templates, TechDocs, and the plugins that make platform engineering real.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">DevOps</span>
+      <time>March 7, 2026</time>
+      <span class="read-time">13 min read</span>
+    </div>
+    <h1>Building Internal Developer Platforms with Backstage</h1>
+    <p class="subtitle">A practical guide to setting up Backstage as your Internal Developer Portal — software catalog, scaffolding templates, TechDocs, and the plugins that make platform engineering real.</p>
+  </header>
+  <div class="article-body">
+    <p>Platform engineering is the practice of building a self-service layer on top of your infrastructure so developers can ship without filing tickets. Backstage, created by Spotify and donated to the CNCF, is the leading open-source framework for building these Internal Developer Portals (IDPs).</p>
+<p>This guide walks you through setting up Backstage from scratch and configuring the four capabilities that matter most.</p>
+<h2>What Backstage Actually Does</h2>
+<div class="diagram-box">
+┌─────────────────────────────────────────────────────────┐
+│                  BACKSTAGE PORTAL                       │
+│                                                         │
+│  ┌─────────────┐ ┌──────────────┐ ┌─────────────────┐  │
+│  │  SOFTWARE    │ │ SCAFFOLDER   │ │   TECHDOCS      │  │
+│  │  CATALOG     │ │ (Templates)  │ │                 │  │
+│  │             │ │              │ │  Docs-as-code   │  │
+│  │  Every svc, │ │  Create new  │ │  rendered from  │  │
+│  │  its owner, │ │  services    │ │  markdown in    │  │
+│  │  its APIs,  │ │  from golden │ │  each repo      │  │
+│  │  its deps   │ │  paths       │ │                 │  │
+│  └─────────────┘ └──────────────┘ └─────────────────┘  │
+│                                                         │
+│  ┌─────────────┐ ┌──────────────┐ ┌─────────────────┐  │
+│  │  KUBERNETES  │ │  CI/CD       │ │  SEARCH         │  │
+│  │  PLUGIN      │ │  PLUGIN      │ │                 │  │
+│  │             │ │              │ │  Find anything  │  │
+│  │  Pod status, │ │  Pipeline   │ │  across all     │  │
+│  │  logs,       │ │  status,    │ │  services,      │  │
+│  │  deployments │ │  history    │ │  docs, APIs     │  │
+│  └─────────────┘ └──────────────┘ └─────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+</div>
+<h2>Step 1: Create a Backstage App</h2>
+<pre><code class="language-bash">npx @backstage/create-app@latest
+# Enter app name: my-developer-portal
+cd my-developer-portal
+yarn dev
+</code></pre>
+<p>This starts Backstage at <code>http://localhost:3000</code> with a default catalog.</p>
+<h2>Step 2: The Software Catalog</h2>
+<p>The catalog is the foundation — a registry of every service, library, API, and resource in your organization.</p>
+<h3>Registering a Service</h3>
+<p>Each service has a <code>catalog-info.yaml</code> in its repo:</p>
+<pre><code class="language-yaml"># catalog-info.yaml (in the service's repository)
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: order-api
+  description: REST API for order management
+  tags:
+    - typescript
+    - rest-api
+    - production
+  annotations:
+    github.com/project-slug: my-org/order-api
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - url: https://grafana.internal/d/order-api
+      title: Grafana Dashboard
+      icon: dashboard
+spec:
+  type: service
+  lifecycle: production
+  owner: team-commerce
+  system: commerce-platform
+  providesApis:
+    - order-api
+  consumesApis:
+    - payment-api
+    - inventory-api
+  dependsOn:
+    - resource:orders-database
+    - resource:redis-cache
+</code></pre>
+<h3>Auto-Discovery</h3>
+<p>Don't register services manually. Use auto-discovery to scan your GitHub org:</p>
+<pre><code class="language-yaml"># app-config.yaml
+catalog:
+  providers:
+    github:
+      myOrg:
+        organization: 'my-org'
+        catalogPath: '/catalog-info.yaml'
+        filters:
+          branch: 'main'
+          repository: '.*'
+        schedule:
+          frequency: { minutes: 30 }
+          timeout: { minutes: 3 }
+</code></pre>
+<p>Backstage scans every repo in your org every 30 minutes, discovering and registering any service with a <code>catalog-info.yaml</code>.</p>
+<h3>System and Domain Modeling</h3>
+<p>Group services into systems and domains for a birds-eye view:</p>
+<pre><code class="language-yaml"># system: commerce-platform
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: commerce-platform
+  description: All services powering the e-commerce experience
+spec:
+  owner: team-commerce
+  domain: shopping
+
+# domain: shopping
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: shopping
+  description: The end-to-end shopping experience
+spec:
+  owner: group:engineering-leadership
+</code></pre>
+<h2>Step 3: Software Templates (Golden Paths)</h2>
+<p>Templates let developers create new services in minutes with all the right defaults — CI/CD, monitoring, security, and documentation pre-configured.</p>
+<h3>Creating a Template</h3>
+<pre><code class="language-yaml"># templates/node-service/template.yaml
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: node-service
+  title: Node.js Microservice
+  description: Create a production-ready Node.js service with Express, TypeScript, CI/CD, and monitoring
+  tags:
+    - nodejs
+    - typescript
+    - recommended
+spec:
+  owner: team-platform
+  type: service
+
+  parameters:
+    - title: Service Details
+      required: [name, description, owner]
+      properties:
+        name:
+          title: Service Name
+          type: string
+          pattern: '^[a-z][a-z0-9-]*$'
+          description: Lowercase with hyphens (e.g., order-api)
+        description:
+          title: Description
+          type: string
+        owner:
+          title: Owner Team
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+
+    - title: Infrastructure
+      properties:
+        database:
+          title: Database
+          type: string
+          enum: [none, postgresql, mongodb]
+          default: none
+        cache:
+          title: Cache
+          type: string
+          enum: [none, redis]
+          default: none
+        messageQueue:
+          title: Message Queue
+          type: string
+          enum: [none, rabbitmq, kafka]
+          default: none
+
+  steps:
+    - id: fetch-template
+      name: Fetch Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: '$'
+          description: '$'
+          owner: '$'
+          database: '$'
+          cache: '$'
+
+    - id: publish
+      name: Create Repository
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        repoUrl: 'github.com?owner=my-org&amp;repo=$'
+        description: '$'
+        defaultBranch: main
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: '$'
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repository
+        url: '$'
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: '$'
+</code></pre>
+<p>What happens when a developer uses this template:</p>
+<ol>
+<li>Fill out the form (name, owner, database choice)</li>
+<li>Template generates a full project from the skeleton</li>
+<li>GitHub repo is created with CI/CD, Dockerfile, and monitoring pre-configured</li>
+<li>Service is automatically registered in the Backstage catalog</li>
+</ol>
+<p><strong>Time to production-ready service: ~3 minutes</strong> instead of 2-3 days.</p>
+<h2>Step 4: TechDocs</h2>
+<p>TechDocs renders Markdown documentation from each service's repository directly in Backstage. Documentation lives next to the code, always current.</p>
+<h3>Enable in a Service</h3>
+<p>Add to the service's repo:</p>
+<pre><code class="language-yaml"># docs/
+# ├── index.md
+# ├── architecture.md
+# └── runbook.md
+
+# mkdocs.yml (in repo root)
+site_name: Order API
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Runbook: runbook.md
+
+plugins:
+  - techdocs-core
+</code></pre>
+<p>The <code>backstage.io/techdocs-ref: dir:.</code> annotation in <code>catalog-info.yaml</code> tells Backstage to build docs from this repo. Developers see rendered documentation directly in the service's Backstage page.</p>
+<h2>Step 5: Essential Plugins</h2>
+<h3>Kubernetes Plugin</h3>
+<p>Shows pod status, deployments, and logs for each service:</p>
+<pre><code class="language-yaml"># catalog-info.yaml annotation
+metadata:
+  annotations:
+    backstage.io/kubernetes-id: order-api
+    backstage.io/kubernetes-namespace: production
+</code></pre>
+<p>Developers see:</p>
+<ul>
+<li>Pod count and status (Running, Pending, CrashLoopBackOff)</li>
+<li>Recent deployments with rollout status</li>
+<li>Resource usage (CPU, memory)</li>
+<li>Pod logs (without needing <code>kubectl</code> access)</li>
+</ul>
+<h3>CI/CD Plugin (GitHub Actions)</h3>
+<pre><code class="language-yaml">metadata:
+  annotations:
+    github.com/project-slug: my-org/order-api
+</code></pre>
+<p>Shows workflow runs, build status, and deployment history directly in Backstage.</p>
+<h3>API Documentation Plugin</h3>
+<p>Register APIs alongside services:</p>
+<pre><code class="language-yaml">apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: order-api
+  description: Order management REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: team-commerce
+  definition:
+    $text: ./openapi.yaml
+</code></pre>
+<p>Renders interactive OpenAPI documentation in Backstage.</p>
+<h2>Measuring Platform Success</h2>
+<p>Track these metrics to know if your IDP is working:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>How to Measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time to first deploy</td>
+<td>&lt; 30 min</td>
+<td>Track template usage → first pipeline run</td>
+</tr>
+<tr>
+<td>Catalog coverage</td>
+<td>&gt; 90%</td>
+<td>Services in Backstage / total services</td>
+</tr>
+<tr>
+<td>Self-service rate</td>
+<td>&gt; 80%</td>
+<td>Infra requests via templates / total requests</td>
+</tr>
+<tr>
+<td>Developer satisfaction</td>
+<td>&gt; 4/5</td>
+<td>Quarterly survey</td>
+</tr>
+<tr>
+<td>Onboarding time</td>
+<td>&lt; 1 week</td>
+<td>New hire → first PR merged</td>
+</tr>
+</tbody>
+</table>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Empty catalog on launch</strong> — pre-populate before announcing to the org</li>
+<li><strong>Too many templates</strong> — start with 2-3 golden paths, not 20 options</li>
+<li><strong>No ownership data</strong> — a catalog without owners is just a list</li>
+<li><strong>Building alone</strong> — platform engineering is a product; talk to your developer-customers</li>
+<li><strong>Perfection before launch</strong> — ship with the catalog + one template; iterate from there</li>
+</ol>
+<p>The portal is only as good as the data in it and the golden paths it provides. Start small, measure adoption, and expand based on what developers actually need.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

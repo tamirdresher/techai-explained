@@ -1,0 +1,208 @@
+<h1>שיעור 1: Big O Notation — מדידת סיבוכיות אלגוריתמים</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Big O Notation הוא הבסיס לכל שיחה על ביצועים בראיון.<br>
+&quot;מה הסיבוכיות של הפתרון שלך?&quot; — זו שאלה שתשמע בכל ראיון אלגוריתמי.<br>
+בשיעור הזה נלמד לזהות ולחשב Big O במהירות.</p>
+<hr>
+<h2>מה הוא Big O?</h2>
+<p>Big O מתאר איך <strong>זמן הריצה (Time Complexity)</strong> או <strong>שימוש הזיכרון (Space Complexity)</strong> של אלגוריתם גדל ביחס לגודל הקלט.</p>
+<p>הסימנים הנפוצים:</p>
+<table>
+<thead>
+<tr>
+<th>Big O</th>
+<th>שם</th>
+<th>דוגמה</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O(1)</td>
+<td>Constant</td>
+<td>גישה למערך בindex</td>
+</tr>
+<tr>
+<td>O(log n)</td>
+<td>Logarithmic</td>
+<td>Binary Search</td>
+</tr>
+<tr>
+<td>O(n)</td>
+<td>Linear</td>
+<td>Linear Search</td>
+</tr>
+<tr>
+<td>O(n log n)</td>
+<td>Log-linear</td>
+<td>Merge Sort</td>
+</tr>
+<tr>
+<td>O(n²)</td>
+<td>Quadratic</td>
+<td>Bubble Sort</td>
+</tr>
+<tr>
+<td>O(2^n)</td>
+<td>Exponential</td>
+<td>Fibonacci רקורסיבי</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>O(1) — Constant Time</h2>
+<pre><code class="language-csharp">// גישה ישירה — לא משנה כמה גדול המערך
+int GetFirst(int[] arr) =&gt; arr[0]; // O(1)
+
+// Hash lookup
+var dict = new Dictionary&lt;string, int&gt;();
+dict[&quot;key&quot;] = 42;
+var val = dict[&quot;key&quot;]; // O(1) בממוצע
+</code></pre>
+<hr>
+<h2>O(n) — Linear Time</h2>
+<pre><code class="language-csharp">// לולאה פשוטה על כל האלמנטים
+int Sum(int[] arr)
+{
+    int sum = 0;
+    foreach (int x in arr) // n iterations
+        sum += x;
+    return sum; // O(n)
+}
+</code></pre>
+<hr>
+<h2>O(n²) — Quadratic Time</h2>
+<pre><code class="language-csharp">// לולאה כפולה — מוצאים כפולים
+bool HasDuplicates(int[] arr)
+{
+    for (int i = 0; i &lt; arr.Length; i++)
+        for (int j = i + 1; j &lt; arr.Length; j++) // n * n
+            if (arr[i] == arr[j])
+                return true;
+    return false; // O(n²)
+}
+
+// ✅ גרסה יעילה יותר — O(n)
+bool HasDuplicatesFast(int[] arr)
+{
+    var seen = new HashSet&lt;int&gt;();
+    foreach (int x in arr)
+        if (!seen.Add(x))
+            return true;
+    return false;
+}
+</code></pre>
+<hr>
+<h2>O(log n) — Logarithmic Time</h2>
+<pre><code class="language-csharp">// Binary Search — חוצה את המרחב כל פעם
+int BinarySearch(int[] arr, int target)
+{
+    int left = 0, right = arr.Length - 1;
+    
+    while (left &lt;= right)
+    {
+        int mid = left + (right - left) / 2;
+        
+        if (arr[mid] == target) return mid;
+        if (arr[mid] &lt; target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1; // O(log n)
+}
+</code></pre>
+<hr>
+<h2>Space Complexity</h2>
+<pre><code class="language-csharp">// O(1) space — לא משתמשים בזיכרון נוסף
+int SumInPlace(int[] arr)
+{
+    int sum = 0;
+    foreach (int x in arr) sum += x;
+    return sum; // Space: O(1)
+}
+
+// O(n) space — יוצרים מבנה נוסף בגודל n
+int[] DuplicateArray(int[] arr)
+{
+    var result = new int[arr.Length]; // O(n) space
+    Array.Copy(arr, result, arr.Length);
+    return result;
+}
+</code></pre>
+<hr>
+<h2>Drop Constants — כלל חשוב</h2>
+<pre><code class="language-csharp">// O(2n) → O(n) (מורידים את ה-2)
+void TwoLoops(int[] arr)
+{
+    foreach (int x in arr) Console.Write(x); // n
+    foreach (int x in arr) Console.Write(x); // n
+    // O(2n) = O(n)
+}
+
+// O(n + m) — כשיש שני קלטים שונים
+void TwoInputs(int[] a, int[] b)
+{
+    foreach (int x in a) Console.Write(x); // n
+    foreach (int x in b) Console.Write(x); // m
+    // O(n + m) — לא O(n)!
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה הסיבוכיות של פעולות על מבני נתונים?&quot;</h3>
+<table>
+<thead>
+<tr>
+<th>פעולה</th>
+<th>Array</th>
+<th>LinkedList</th>
+<th>HashMap</th>
+<th>BST</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Access</td>
+<td>O(1)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Search</td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Insert</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>O(1)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Delete</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>O(1)</td>
+<td>O(log n)</td>
+</tr>
+</tbody>
+</table>
+<h3>שאלה 2: &quot;מה עדיף — O(n log n) או O(n²)?&quot;</h3>
+<p><strong>תשובה:</strong> O(n log n) בהרבה. עבור n=1000: log n ≈ 10, אז n log n ≈ 10,000 לעומת n² = 1,000,000.</p>
+<hr>
+<h2>סיכום ויזואלי</h2>
+<pre><code>מהיר
+  O(1)        ────────────────────── קבוע
+  O(log n)    ─────────/
+  O(n)        ────────/
+  O(n log n)  ───────/
+  O(n²)       ──────/
+  O(2^n)      ─────/
+איטי                   n →
+</code></pre>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 1 מתוך 10</em></p>

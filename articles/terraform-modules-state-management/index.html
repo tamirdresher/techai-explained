@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terraform Modules and State Management at Scale — TechAI Explained</title>
+  <meta name="description" content="A guide to designing reusable Terraform modules, managing remote state safely, and structuring multi-environment infrastructure without the common pitfalls that hit teams at scale.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">DevOps</span>
+      <time>March 6, 2026</time>
+      <span class="read-time">12 min read</span>
+    </div>
+    <h1>Terraform Modules and State Management at Scale</h1>
+    <p class="subtitle">A guide to designing reusable Terraform modules, managing remote state safely, and structuring multi-environment infrastructure without the common pitfalls that hit teams at scale.</p>
+  </header>
+  <div class="article-body">
+    <p>Terraform is simple when you have one environment and one person running <code>terraform apply</code>. It gets complicated fast when you have 5 environments, 20 engineers, and 200 resources. This guide covers the patterns that keep Terraform manageable at scale: module design, state management, and multi-environment strategies.</p>
+<h2>Module Design Principles</h2>
+<p>A Terraform module is a reusable package of infrastructure. Good modules are the difference between copy-pasting HCL across environments and having a single source of truth.</p>
+<h3>The Three-Tier Module Structure</h3>
+<div class="diagram-box">
+TIER 1: ROOT MODULES (Environments)
+  live/
+  ├── dev/        ── calls Tier 2 modules with dev values
+  ├── staging/    ── calls Tier 2 modules with staging values
+  └── production/ ── calls Tier 2 modules with prod values
+<p>TIER 2: COMPOSITION MODULES (Stacks)
+modules/stacks/
+├── api-stack/       ── composes Tier 3 modules into a full API
+├── data-stack/      ── composes Tier 3 modules into a data platform
+└── networking/      ── composes Tier 3 modules into VPC + DNS</p>
+<p>TIER 3: RESOURCE MODULES (Building blocks)
+modules/resources/
+├── aks-cluster/     ── single AKS cluster with best practices
+├── postgresql/      ── single PostgreSQL instance
+├── redis/           ── single Redis cache
+└── storage-account/ ── single storage account with policies</p>
+</div>
+<h3>Writing a Good Resource Module</h3>
+<pre><code class="language-hcl"># modules/resources/postgresql/main.tf
+
+variable &quot;name&quot; {
+  description = &quot;Database instance name&quot;
+  type        = string
+  validation {
+    condition     = can(regex(&quot;^[a-z][a-z0-9-]{2,58}[a-z0-9]$&quot;, var.name))
+    error_message = &quot;Name must be 4-60 chars, lowercase alphanumeric with hyphens.&quot;
+  }
+}
+
+variable &quot;sku&quot; {
+  description = &quot;Compute tier and size&quot;
+  type        = string
+  default     = &quot;GP_Standard_D2s_v3&quot;
+}
+
+variable &quot;storage_mb&quot; {
+  description = &quot;Storage size in MB&quot;
+  type        = number
+  default     = 32768
+}
+
+variable &quot;high_availability&quot; {
+  description = &quot;Enable zone-redundant HA&quot;
+  type        = bool
+  default     = false
+}
+
+variable &quot;tags&quot; {
+  description = &quot;Resource tags&quot;
+  type        = map(string)
+  default     = {}
+}
+
+resource &quot;azurerm_postgresql_flexible_server&quot; &quot;this&quot; {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  version             = &quot;16&quot;
+  sku_name            = var.sku
+  storage_mb          = var.storage_mb
+
+  high_availability {
+    mode = var.high_availability ? &quot;ZoneRedundant&quot; : &quot;Disabled&quot;
+  }
+
+  tags = merge(var.tags, {
+    managed_by = &quot;terraform&quot;
+    module     = &quot;postgresql&quot;
+  })
+}
+
+output &quot;id&quot; {
+  description = &quot;PostgreSQL server ID&quot;
+  value       = azurerm_postgresql_flexible_server.this.id
+}
+
+output &quot;fqdn&quot; {
+  description = &quot;Fully qualified domain name&quot;
+  value       = azurerm_postgresql_flexible_server.this.fqdn
+}
+
+output &quot;connection_string&quot; {
+  description = &quot;Connection string (without password)&quot;
+  value       = &quot;postgresql://${azurerm_postgresql_flexible_server.this.fqdn}:5432&quot;
+  sensitive   = true
+}
+</code></pre>
+<h3>Module Design Rules</h3>
+<ol>
+<li><strong>One responsibility</strong> — a module creates one logical resource (even if it's multiple Terraform resources)</li>
+<li><strong>Sensible defaults</strong> — modules should work with minimal inputs</li>
+<li><strong>Validate inputs</strong> — use <code>validation</code> blocks to catch mistakes early</li>
+<li><strong>Output everything useful</strong> — IDs, FQDNs, connection strings</li>
+<li><strong>Tag everything</strong> — enforce tagging at the module level</li>
+</ol>
+<h2>State Management</h2>
+<p>Terraform state is the mapping between your HCL code and real cloud resources. Corrupt or lose the state, and Terraform can't manage your infrastructure.</p>
+<h3>Remote State with Locking</h3>
+<p><strong>Never</strong> use local state in a team. Always use remote state with locking:</p>
+<pre><code class="language-hcl"># backend.tf
+terraform {
+  backend &quot;azurerm&quot; {
+    resource_group_name  = &quot;rg-terraform-state&quot;
+    storage_account_name = &quot;stterraformstate&quot;
+    container_name       = &quot;tfstate&quot;
+    key                  = &quot;production/api-stack.tfstate&quot;
+    use_oidc             = true  # No stored credentials!
+  }
+}
+</code></pre>
+<pre><code class="language-hcl"># AWS equivalent
+terraform {
+  backend &quot;s3&quot; {
+    bucket         = &quot;my-terraform-state&quot;
+    key            = &quot;production/api-stack.tfstate&quot;
+    region         = &quot;us-east-1&quot;
+    dynamodb_table = &quot;terraform-locks&quot;  # Locking!
+    encrypt        = true
+  }
+}
+</code></pre>
+<h3>State File Per Stack</h3>
+<p>One state file per environment per stack. Never put all resources in one state file:</p>
+<div class="diagram-box">
+GOOD: Separate state files
+──────────────────────────
+<p>production/networking.tfstate    (VPC, DNS, certificates)
+production/data.tfstate          (databases, caches)
+production/api.tfstate           (AKS, app services)</p>
+<p>staging/networking.tfstate
+staging/data.tfstate
+staging/api.tfstate</p>
+<p>Benefits:</p>
+<ul>
+<li>Blast radius is limited (bad apply only affects one stack)</li>
+<li>Parallel applies across stacks</li>
+<li>Different teams can own different stacks</li>
+<li>Faster plan/apply (fewer resources to check)</li>
+</ul>
+<p>BAD: One giant state file
+─────────────────────────</p>
+<p>production/everything.tfstate    (500 resources)</p>
+<p>Problems:</p>
+<ul>
+<li>One bad apply can destroy everything</li>
+<li>Slow plan (checks all 500 resources)</li>
+<li>Everyone blocks each other with the state lock</li>
+</ul>
+</div>
+<h3>State Operations You Need to Know</h3>
+<pre><code class="language-bash"># List everything in state
+terraform state list
+
+# Show a specific resource's state
+terraform state show azurerm_postgresql_flexible_server.this
+
+# Move a resource (refactoring without destroy/recreate)
+terraform state mv \
+  module.old_name.azurerm_postgresql_flexible_server.this \
+  module.new_name.azurerm_postgresql_flexible_server.this
+
+# Import existing resource into state
+terraform import \
+  azurerm_postgresql_flexible_server.this \
+  /subscriptions/.../flexibleServers/my-postgres
+
+# Remove from state (Terraform forgets, resource still exists)
+terraform state rm azurerm_postgresql_flexible_server.this
+</code></pre>
+<h2>Multi-Environment Strategy</h2>
+<h3>Directory-Based Environments</h3>
+<pre><code>infrastructure/
+├── modules/
+│   └── stacks/
+│       └── api-stack/
+│           ├── main.tf
+│           ├── variables.tf
+│           └── outputs.tf
+├── live/
+│   ├── dev/
+│   │   ├── main.tf        # calls module with dev values
+│   │   ├── terraform.tfvars
+│   │   └── backend.tf
+│   ├── staging/
+│   │   ├── main.tf
+│   │   ├── terraform.tfvars
+│   │   └── backend.tf
+│   └── production/
+│       ├── main.tf
+│       ├── terraform.tfvars
+│       └── backend.tf
+</code></pre>
+<p>Each environment calls the same module with different variables:</p>
+<pre><code class="language-hcl"># live/production/main.tf
+module &quot;api_stack&quot; {
+  source = &quot;../../modules/stacks/api-stack&quot;
+
+  environment        = &quot;production&quot;
+  aks_node_count     = 5
+  aks_node_size      = &quot;Standard_D4s_v3&quot;
+  database_sku       = &quot;GP_Standard_D4s_v3&quot;
+  high_availability  = true
+  redis_sku          = &quot;Premium&quot;
+}
+</code></pre>
+<pre><code class="language-hcl"># live/dev/main.tf
+module &quot;api_stack&quot; {
+  source = &quot;../../modules/stacks/api-stack&quot;
+
+  environment        = &quot;dev&quot;
+  aks_node_count     = 2
+  aks_node_size      = &quot;Standard_D2s_v3&quot;
+  database_sku       = &quot;B_Standard_B1ms&quot;
+  high_availability  = false
+  redis_sku          = &quot;Basic&quot;
+}
+</code></pre>
+<h2>CI/CD for Terraform</h2>
+<pre><code class="language-yaml"># .github/workflows/terraform.yml
+name: Terraform
+
+on:
+  pull_request:
+    paths: ['infrastructure/**']
+  push:
+    branches: [main]
+    paths: ['infrastructure/**']
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging, production]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: azure/login@v2
+        with:
+          client-id: $
+          tenant-id: $
+          subscription-id: $
+
+      - name: Terraform Plan
+        working-directory: infrastructure/live/$
+        run: |
+          terraform init
+          terraform plan -out=plan.tfplan
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          working-directory: infrastructure/live/$
+
+  apply:
+    if: github.ref == 'refs/heads/main'
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging, production]
+      max-parallel: 1  # Apply environments sequentially
+    environment: $  # Requires approval for prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/login@v2
+        with:
+          client-id: $
+          tenant-id: $
+          subscription-id: $
+
+      - name: Terraform Apply
+        working-directory: infrastructure/live/$
+        run: |
+          terraform init
+          terraform apply -auto-approve
+</code></pre>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>No state locking</strong> — two engineers run <code>apply</code> simultaneously, state gets corrupted</li>
+<li><strong>Monolith state file</strong> — 500 resources in one file; one mistake destroys everything</li>
+<li><strong>Hardcoded values in modules</strong> — modules should accept variables, not contain environment-specific values</li>
+<li><strong>No <code>terraform plan</code> in CI</strong> — applying without reviewing the plan is infrastructure roulette</li>
+<li><strong>Ignoring drift</strong> — schedule <code>terraform plan</code> runs to detect manual changes</li>
+</ol>
+<p>Get modules, state, and CI/CD right, and Terraform scales to thousands of resources across dozens of environments. Get them wrong, and you'll spend more time fixing Terraform than building infrastructure.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

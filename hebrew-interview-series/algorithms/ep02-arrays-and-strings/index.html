@@ -1,0 +1,139 @@
+<h1>שיעור 2: Arrays ו-Strings — Two-Pointer ו-Sliding Window</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Arrays ו-Strings הם הנושאים הכי נפוצים ב-LeetCode ובראיונות.<br>
+שני הטכניקות החיוניות: <strong>Two-Pointer</strong> ו-<strong>Sliding Window</strong> יפתרו עשרות שאלות.</p>
+<hr>
+<h2>Two-Pointer — שני מצביעים</h2>
+<pre><code class="language-csharp">// בעיה: האם יש זוג ב-sorted array שסכומו שווה ל-target?
+bool TwoSum(int[] arr, int target)
+{
+    int left = 0, right = arr.Length - 1;
+    
+    while (left &lt; right)
+    {
+        int sum = arr[left] + arr[right];
+        if (sum == target) return true;
+        if (sum &lt; target) left++;
+        else right--;
+    }
+    return false; // O(n) במקום O(n²)!
+}
+</code></pre>
+<hr>
+<h2>Reverse Array — Two-Pointer</h2>
+<pre><code class="language-csharp">void ReverseArray(int[] arr)
+{
+    int left = 0, right = arr.Length - 1;
+    
+    while (left &lt; right)
+    {
+        (arr[left], arr[right]) = (arr[right], arr[left]); // swap
+        left++;
+        right--;
+    }
+}
+</code></pre>
+<hr>
+<h2>בעיות String נפוצות</h2>
+<pre><code class="language-csharp">// Palindrome check
+bool IsPalindrome(string s)
+{
+    int left = 0, right = s.Length - 1;
+    while (left &lt; right)
+    {
+        if (s[left] != s[right]) return false;
+        left++;
+        right--;
+    }
+    return true; // O(n)
+}
+
+// Count characters
+Dictionary&lt;char, int&gt; CharCount(string s)
+{
+    var count = new Dictionary&lt;char, int&gt;();
+    foreach (char c in s)
+        count[c] = count.GetValueOrDefault(c) + 1;
+    return count;
+}
+
+// Anagram check
+bool IsAnagram(string s, string t)
+{
+    if (s.Length != t.Length) return false;
+    var count = new int[26];
+    foreach (char c in s) count[c - 'a']++;
+    foreach (char c in t) count[c - 'a']--;
+    return count.All(x =&gt; x == 0);
+}
+</code></pre>
+<hr>
+<h2>Sliding Window — חלון הזזה</h2>
+<pre><code class="language-csharp">// מציאת תת-מערך מקסימלי עם סכום K
+int MaxSubarraySum(int[] arr, int k)
+{
+    int windowSum = 0;
+    for (int i = 0; i &lt; k; i++)
+        windowSum += arr[i];
+    
+    int maxSum = windowSum;
+    
+    for (int i = k; i &lt; arr.Length; i++)
+    {
+        windowSum += arr[i] - arr[i - k]; // הזזת חלון
+        maxSum = Math.Max(maxSum, windowSum);
+    }
+    return maxSum; // O(n)
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה: Remove Duplicates מ-Sorted Array (In-Place)</h3>
+<pre><code class="language-csharp">int RemoveDuplicates(int[] nums)
+{
+    if (nums.Length == 0) return 0;
+    int slow = 0;
+    
+    for (int fast = 1; fast &lt; nums.Length; fast++)
+    {
+        if (nums[fast] != nums[slow])
+        {
+            slow++;
+            nums[slow] = nums[fast];
+        }
+    }
+    return slow + 1; // O(n), Space O(1)
+}
+</code></pre>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>טכניקה</th>
+<th>מתי להשתמש</th>
+<th>סיבוכיות</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two-Pointer</td>
+<td>sorted array, pairs</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>Sliding Window</td>
+<td>subarray/substring</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>HashMap</td>
+<td>frequency count</td>
+<td>O(n)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 2 מתוך 10</em></p>

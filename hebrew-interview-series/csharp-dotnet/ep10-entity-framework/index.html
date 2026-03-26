@@ -1,0 +1,207 @@
+<h1>שיעור 10: Entity Framework Core — Migrations, N+1 ואופטימיזציה</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Entity Framework Core הוא ה-ORM הנפוץ ביותר ב-.NET.<br>
+בראיון, מועמדים שמבינים את בעיית ה-N+1, יודעים לעשות migrations ומבינים את ההבדל בין Eager, Lazy ו-Explicit Loading — מרשימים.</p>
+<hr>
+<h2>DbContext — הלב של EF Core</h2>
+<pre><code class="language-csharp">public class AppDbContext : DbContext
+{
+    public DbSet&lt;User&gt; Users { get; set; }
+    public DbSet&lt;Order&gt; Orders { get; set; }
+    
+    public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options)
+        : base(options) { }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;User&gt;(entity =&gt;
+        {
+            entity.HasKey(e =&gt; e.Id);
+            entity.Property(e =&gt; e.Email).IsRequired().HasMaxLength(256);
+            entity.HasMany(e =&gt; e.Orders).WithOne(o =&gt; o.User);
+        });
+    }
+}
+
+// Registration
+builder.Services.AddDbContext&lt;AppDbContext&gt;(options =&gt;
+    options.UseSqlServer(connectionString));
+</code></pre>
+<hr>
+<h2>Migrations — ניהול סכמת DB</h2>
+<pre><code class="language-bash"># יצירת migration חדש
+dotnet ef migrations add AddUserTable
+
+# החלת migrations ל-DB
+dotnet ef database update
+
+# ביטול migration אחרון
+dotnet ef migrations remove
+
+# הצגת SQL שייווצר
+dotnet ef migrations script
+</code></pre>
+<pre><code class="language-csharp">// Migration שנוצר אוטומטית
+public partial class AddUserTable : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.CreateTable(
+            name: &quot;Users&quot;,
+            columns: table =&gt; new
+            {
+                Id = table.Column&lt;int&gt;(nullable: false)
+                    .Annotation(&quot;SqlServer:Identity&quot;, &quot;1, 1&quot;),
+                Email = table.Column&lt;string&gt;(maxLength: 256, nullable: false),
+                Name = table.Column&lt;string&gt;(maxLength: 100, nullable: true)
+            },
+            constraints: table =&gt;
+            {
+                table.PrimaryKey(&quot;PK_Users&quot;, x =&gt; x.Id);
+            });
+    }
+    
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(name: &quot;Users&quot;);
+    }
+}
+</code></pre>
+<hr>
+<h2>N+1 Problem — הבעיה הכי נפוצה!</h2>
+<pre><code class="language-csharp">// ❌ N+1 Problem!
+var orders = await _context.Orders.ToListAsync(); // 1 שאילתה
+
+foreach (var order in orders) // N שאילתות!
+{
+    Console.WriteLine(order.User.Name); // Lazy Load — שאילתה לכל order!
+}
+// סה&quot;כ: 1 + N שאילתות!
+</code></pre>
+<h3>Eager Loading — הפתרון</h3>
+<pre><code class="language-csharp">// ✅ Eager Loading — שאילתה אחת עם JOIN
+var orders = await _context.Orders
+    .Include(o =&gt; o.User)           // JOIN על Users
+    .Include(o =&gt; o.Items)          // JOIN על Items
+        .ThenInclude(i =&gt; i.Product) // JOIN על Products
+    .ToListAsync();
+// סה&quot;כ: שאילתה אחת!
+</code></pre>
+<h3>Explicit Loading — לפי הצורך</h3>
+<pre><code class="language-csharp">var order = await _context.Orders.FindAsync(id);
+
+// טעינה מפורשת כשצריך
+await _context.Entry(order)
+    .Reference(o =&gt; o.User)
+    .LoadAsync();
+
+await _context.Entry(order)
+    .Collection(o =&gt; o.Items)
+    .LoadAsync();
+</code></pre>
+<hr>
+<h2>AsNoTracking — שיפור ביצועים</h2>
+<pre><code class="language-csharp">// ❌ עם tracking (ברירת מחדל) — שומר snapshot לשינויים
+var users = await _context.Users.ToListAsync();
+
+// ✅ ללא tracking — מהיר יותר לread-only
+var users = await _context.Users
+    .AsNoTracking() // ללא Change Tracking
+    .ToListAsync();
+</code></pre>
+<hr>
+<h2>Raw SQL וFromSqlRaw</h2>
+<pre><code class="language-csharp">// Raw SQL כשצריך ביצועים גבוהים
+var users = await _context.Users
+    .FromSqlRaw(&quot;SELECT * FROM Users WHERE Email LIKE {0}&quot;, &quot;%@company.com&quot;)
+    .ToListAsync();
+
+// Stored Procedures
+var result = await _context.Database
+    .ExecuteSqlRawAsync(&quot;EXEC UpdateUserStatus @UserId = {0}&quot;, userId);
+</code></pre>
+<hr>
+<h2>Transactions</h2>
+<pre><code class="language-csharp">using var transaction = await _context.Database.BeginTransactionAsync();
+
+try
+{
+    var order = new Order { UserId = 1, Total = 100 };
+    _context.Orders.Add(order);
+    await _context.SaveChangesAsync();
+    
+    var payment = new Payment { OrderId = order.Id, Amount = 100 };
+    _context.Payments.Add(payment);
+    await _context.SaveChangesAsync();
+    
+    await transaction.CommitAsync();
+}
+catch
+{
+    await transaction.RollbackAsync();
+    throw;
+}
+</code></pre>
+<hr>
+<h2>Compiled Queries — ביצועים מקסימליים</h2>
+<pre><code class="language-csharp">// שאילתה שמתorגמת פעם אחת ונשמרת
+private static readonly Func&lt;AppDbContext, int, Task&lt;User?&gt;&gt; GetUserById =
+    EF.CompileAsyncQuery((AppDbContext context, int id) =&gt;
+        context.Users.FirstOrDefault(u =&gt; u.Id == id));
+
+// שימוש — מהיר יותר כי אין צורך לparse שוב
+var user = await GetUserById(_context, 1);
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה הוא N+1 Problem?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> כשמביאים N אובייקטים ואז מבצעים עוד N שאילתות לrelated entities. פותרים עם <code>Include</code> (Eager Loading).</p>
+<h3>שאלה 2: &quot;מה ההבדל בין Eager, Lazy ו-Explicit Loading?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li>Eager: טוען related data בשאילתה הראשית (<code>Include</code>)</li>
+<li>Lazy: טוען כשניגשים ל-property (גורם N+1)</li>
+<li>Explicit: טוענים ידנית כשצריך (<code>LoadAsync</code>)</li>
+</ul>
+<h3>שאלה 3: &quot;מתי להשתמש ב-AsNoTracking?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> כשלא צריך לעדכן את האובייקטים — read-only scenarios. משפר ביצועים כי EF לא עוקב אחרי שינויים.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>נושא</th>
+<th>הכלי</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N+1</td>
+<td><code>Include</code> + <code>ThenInclude</code></td>
+</tr>
+<tr>
+<td>Read performance</td>
+<td><code>AsNoTracking</code></td>
+</tr>
+<tr>
+<td>Schema changes</td>
+<td><code>migrations add</code> + <code>database update</code></td>
+</tr>
+<tr>
+<td>Complex queries</td>
+<td><code>FromSqlRaw</code></td>
+</tr>
+<tr>
+<td>Atomic operations</td>
+<td><code>BeginTransaction</code></td>
+</tr>
+<tr>
+<td>Repeated queries</td>
+<td>Compiled Queries</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 10 מתוך 10</em></p>

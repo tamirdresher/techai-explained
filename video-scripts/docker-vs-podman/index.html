@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker vs Podman: The Real Differences — TechAI Explained</title>
+  <meta name="description" content="A video script comparing Docker and Podman — architecture, security, Kubernetes compatibility, and which one you should actually use in 2026.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 15, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>Docker vs Podman: The Real Differences</h1>
+    <p class="subtitle">A video script comparing Docker and Podman — architecture, security, Kubernetes compatibility, and which one you should actually use in 2026.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 9 minutes</li>
+<li><strong>Format:</strong> Side-by-side terminal demos with narrated comparison</li>
+<li><strong>Audience:</strong> Developers and DevOps engineers evaluating container runtimes</li>
+<li><strong>Thumbnail Concept:</strong> Docker whale vs Podman seal/walrus logo with VS text in the middle — &quot;The REAL Differences&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 0:45)</h3>
+<p><strong>Hook (0:00 - 0:20)</strong></p>
+<blockquote>
+<p>&quot;Docker Desktop now costs money for enterprise use. Red Hat is pushing Podman as the drop-in replacement. But is it actually a drop-in replacement? Or are there real differences that will break your workflow? Let's find out.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Split screen — Docker logo on left, Podman logo on right.</p>
+<p><strong>Agenda (0:20 - 0:45)</strong></p>
+<blockquote>
+<p>&quot;In this video: the architecture difference that changes everything. Security — why Podman is rootless by default. Kubernetes compatibility. Docker Compose support. And the bottom line — which one should you use in 2026.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 1: Architecture — The Daemon Difference (0:45 - 2:30)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Docker uses a client-server model with a <strong>daemon</strong> (dockerd) running as root</li>
+<li>Podman is <strong>daemonless</strong> — each container is a child process of the command</li>
+<li>This changes everything about security, process management, and systemd integration</li>
+</ul>
+<p><strong>Visual:</strong></p>
+<pre><code>DOCKER ARCHITECTURE          PODMAN ARCHITECTURE
+                             
+docker CLI ──► dockerd       podman CLI ──► container
+                │                            (direct)
+                ├─► container
+                ├─► container              podman CLI ──► container
+                └─► container                            (direct)
+                                           
+Daemon = single point        No daemon = no single
+of failure, runs as root     point of failure
+</code></pre>
+<p><strong>Demo:</strong> Show <code>docker info</code> (daemon running) vs <code>podman info</code> (no daemon).</p>
+<blockquote>
+<p>&quot;When Docker's daemon crashes, all your containers go down. When Podman... well, there's nothing to crash. Each container is its own process tree.&quot;</p>
+</blockquote>
+<p><strong>Key insight on systemd:</strong></p>
+<blockquote>
+<p>&quot;Because Podman containers are regular processes, you can manage them with systemd directly. <code>podman generate systemd</code> creates a systemd unit file. No Docker daemon needed for auto-restart.&quot;</p>
+</blockquote>
+<p><strong>Demo:</strong> <code>podman generate systemd --name myapp &gt; /etc/systemd/system/myapp.service</code></p>
+<hr>
+<h3>SECTION 2: Security — Rootless by Default (2:30 - 4:00)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Docker daemon runs as root by default (security concern)</li>
+<li>Podman runs rootless by default — containers run as your user</li>
+<li>User namespace mapping means root inside the container is NOT root on the host</li>
+<li>No socket to exploit (/var/run/docker.sock is a common attack vector)</li>
+</ul>
+<p><strong>Visual:</strong></p>
+<pre><code>DOCKER (default)                PODMAN (default)
+                                
+Host root ── dockerd            Host user ── podman
+              │                               │
+              └── container                   └── container
+                  (root inside                    (root inside =
+                   = root on host)                 user on host)
+                                
+/var/run/docker.sock            No socket
+(if compromised, full           
+ host access)                   
+</code></pre>
+<p><strong>Demo comparison:</strong></p>
+<ol>
+<li><code>docker run -it ubuntu whoami</code> → root</li>
+<li><code>podman run -it ubuntu whoami</code> → root (but mapped to user on host)</li>
+<li>Show <code>ps aux</code> on host — Docker container owned by root, Podman container owned by user</li>
+</ol>
+<blockquote>
+<p>&quot;The Docker socket is the most common container escape vector. If an attacker gets access to /var/run/docker.sock, they effectively have root on your host. Podman doesn't have a socket. There's nothing to exploit.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 3: Kubernetes Compatibility (4:00 - 5:30)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Podman can generate Kubernetes YAML from running containers</li>
+<li>Podman can run Kubernetes YAML directly (pods)</li>
+<li>Podman has native pod support (groups of containers sharing network)</li>
+<li>Docker needs Docker Compose; Podman speaks both Compose AND Kubernetes</li>
+</ul>
+<p><strong>Demo sequence:</strong></p>
+<ol>
+<li><code>podman pod create --name myapp -p 8080:80</code></li>
+<li><code>podman run -d --pod myapp nginx</code></li>
+<li><code>podman run -d --pod myapp redis</code></li>
+<li><code>podman generate kube myapp &gt; deployment.yaml</code></li>
+<li>Show the generated YAML — it's valid Kubernetes</li>
+</ol>
+<blockquote>
+<p>&quot;Podman doesn't just run containers. It runs pods — exactly like Kubernetes. And it can export them to real Kubernetes YAML. Your local Podman setup translates directly to your production Kubernetes cluster.&quot;</p>
+</blockquote>
+<p><strong>Docker comparison:</strong></p>
+<blockquote>
+<p>&quot;Docker has no concept of pods. You use Docker Compose for multi-container apps, but Compose YAML is not Kubernetes YAML. There's a translation layer that often breaks.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 4: Docker Compose Support (5:30 - 6:45)</h3>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Podman supports Docker Compose files via <code>podman-compose</code> or the built-in <code>podman compose</code></li>
+<li>Most Compose files work without changes</li>
+<li>Some edge cases break: volume plugins, custom networks, build context differences</li>
+</ul>
+<p><strong>Demo:</strong></p>
+<ol>
+<li>Take a standard <code>docker-compose.yml</code></li>
+<li>Run with <code>podman compose up</code></li>
+<li>Show it working</li>
+</ol>
+<p><strong>What breaks:</strong></p>
+<blockquote>
+<p>&quot;About 95% of Docker Compose files work with Podman unchanged. The 5% that break are usually: Docker-specific volume drivers, proprietary network plugins, and build arguments that assume Docker BuildKit. For most teams, the switch is painless.&quot;</p>
+</blockquote>
+<p><strong>Visual table:</strong></p>
+<pre><code>Feature                Docker Compose    Podman Compose
+Build images           ✅                ✅ (via buildah)
+Named volumes          ✅                ✅
+Networks               ✅                ⚠️ (most work)
+Secrets                ✅                ✅
+Volume plugins         ✅                ❌
+BuildKit features      ✅                ⚠️ (partial)
+</code></pre>
+<hr>
+<h3>SECTION 5: Real-World Comparison (6:45 - 8:00)</h3>
+<p><strong>Performance (6:45 - 7:15):</strong></p>
+<blockquote>
+<p>&quot;Performance is nearly identical. Both use the same underlying runtime (runc or crun). Podman actually has a slight edge in startup time because there's no daemon overhead.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Benchmark results — container start time, image pull speed, build time. Nearly identical numbers.</p>
+<p><strong>Desktop Experience (7:15 - 7:45):</strong></p>
+<blockquote>
+<p>&quot;Docker Desktop is polished — GUI, extensions, dev environments. Podman Desktop exists and is improving fast, but it's not at feature parity yet. If you rely on Docker Desktop's GUI features, that's a real consideration.&quot;</p>
+</blockquote>
+<p><strong>Enterprise Cost (7:45 - 8:00):</strong></p>
+<blockquote>
+<p>&quot;Docker Desktop requires a paid subscription for companies with more than 250 employees or more than $10 million in revenue. Podman is completely free. For large organizations, this is often the deciding factor.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 6: The Verdict (8:00 - 8:45)</h3>
+<p><strong>Choose Docker when:</strong></p>
+<ul>
+<li>Your team relies on Docker Desktop's GUI</li>
+<li>You need Docker-specific extensions</li>
+<li>Your CI/CD pipeline is deeply integrated with Docker</li>
+<li>You're a small team and the free tier covers you</li>
+</ul>
+<p><strong>Choose Podman when:</strong></p>
+<ul>
+<li>Security is a priority (rootless by default)</li>
+<li>You're deploying to Kubernetes (native pod support)</li>
+<li>You're in an enterprise avoiding Docker licensing costs</li>
+<li>You're on RHEL, CentOS, or Fedora (Podman is built-in)</li>
+<li>You want systemd integration for container management</li>
+</ul>
+<blockquote>
+<p>&quot;In 2026, Podman is no longer the underdog. For Kubernetes-native workflows and security-conscious teams, it's the better choice. For teams deep in the Docker ecosystem with existing tooling, Docker still works fine. The good news? <code>alias docker=podman</code> works for 95% of commands.&quot;</p>
+</blockquote>
+<hr>
+<h3>OUTRO (8:45 - 9:00)</h3>
+<blockquote>
+<p>&quot;That's Docker vs Podman — the real differences, not the marketing. If this helped you make a decision, subscribe for more no-BS tool comparisons. Next week: container image security scanning — the tools that actually find vulnerabilities.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> 15 seconds with two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Heavy terminal recording — side-by-side Docker and Podman commands</li>
+<li><strong>Graphics:</strong> Architecture diagrams, benchmark comparison charts</li>
+<li><strong>Music:</strong> Minimal, only during transitions</li>
+<li><strong>Pacing:</strong> Tight 9 minutes — no filler. Developers respect concise comparisons.</li>
+<li><strong>SEO Tags:</strong> Docker vs Podman, container runtime, rootless containers, Kubernetes, Docker alternative, Docker Desktop pricing, Podman Desktop</li>
+<li><strong>Controversy angle:</strong> Docker licensing changes are a hot topic — lean into it without being inflammatory</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

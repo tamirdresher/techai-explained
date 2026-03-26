@@ -1,0 +1,145 @@
+<h1>אסטרטגיות Cache — Redis, CDN ואינוואלידציה</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>כיצד caching משפר ביצועים ומפחית עומסים על מסד הנתונים</li>
+<li>ההבדל בין Redis, Memcached ו-CDN</li>
+<li>אסטרטגיות cache invalidation: write-through, write-back, write-around</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: למה cache חשוב במערכות בקנה מידה גדול?</h3>
+<p><strong>תשובה:</strong>
+Cache הוא שכבת אחסון זמני מהיר שנמצאת בין האפליקציה למקור הנתונים המקורי (בדרך כלל מסד נתונים). המטרה היא להפחית latency ולהקל על מסד הנתונים.</p>
+<p><strong>הסיבות לשימוש ב-cache:</strong></p>
+<ol>
+<li><strong>מסד נתונים הוא צוואר הבקבוק</strong> — disk I/O הרבה יותר איטי מ-in-memory access (100ms לעומת 0.1ms)</li>
+<li><strong>הרבה נתונים נקראים פעמים רבות</strong> — ה-80/20 rule: 80% מהבקשות מתמקדות ב-20% מהנתונים</li>
+<li><strong>חישובים יקרים</strong> — aggregations, report generation שניתן לחשב פעם ולשמור</li>
+<li><strong>הגנה על downstream services</strong> — מניעת מפולת בעת spike בתעבורה</li>
+</ol>
+<p><strong>Cache Hit vs Cache Miss:</strong></p>
+<ul>
+<li><strong>Hit</strong> — הנתון נמצא ב-cache, מוחזר מהר</li>
+<li><strong>Miss</strong> — הנתון לא ב-cache, צריך לפנות למקור, זמן תגובה גבוה יותר</li>
+<li><strong>Hit Rate</strong> — אחוז ה-hits מתוך כלל הבקשות; hit rate גבוה = cache אפקטיבי</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Cache יעיל לנתונים שנקראים הרבה ומשתנים לעתים רחוקות</li>
+<li>Hit rate של 80%+ נחשב טוב</li>
+<li>יש לחשוב על cache warm-up — מה קורה אחרי restart?</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה ההבדל בין Redis ל-Memcached?</h3>
+<p><strong>תשובה:</strong>
+שניהם הם in-memory data stores מהירים, אך יש הבדלים משמעותיים:</p>
+<p><strong>Memcached:</strong></p>
+<ul>
+<li>פשוט יותר — רק key-value strings</li>
+<li>Multi-threaded — יכול לנצל מספר cores</li>
+<li>מתאים ל-simple caching use case</li>
+<li>לא תומך ב-persistence (נתונים אובדים בהפעלה מחדש)</li>
+</ul>
+<p><strong>Redis:</strong></p>
+<ul>
+<li>תומך במבני נתונים עשירים: strings, hashes, lists, sets, sorted sets, streams</li>
+<li>תומך ב-persistence (RDB snapshots, AOF log)</li>
+<li>תומך ב-pub/sub messaging</li>
+<li>Replication ו-clustering מובנים</li>
+<li>Atomic operations</li>
+<li>מתאים ל-use cases מורכבים: leaderboards, rate limiting, session storage, distributed locks</li>
+</ul>
+<p><strong>מתי לבחור מה:</strong></p>
+<ul>
+<li>Memcached: רק צריך simple string cache, יש הרבה traffic ו-multi-threading חשוב</li>
+<li>Redis: צריך מבני נתונים מורכבים, persistence, clustering, או use cases מעבר ל-simple cache</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Redis הוא הבחירה הנפוצה יותר כיום</li>
+<li>Redis יכול לשמש גם כ-primary database ל-use cases מסוימים</li>
+<li>שניהם in-memory = נתונים אובדים בהפעלה מחדש (אלא אם מגדירים persistence)</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה זה Cache Invalidation ולמה זה קשה?</h3>
+<p><strong>תשובה:</strong>
+Cache Invalidation הוא התהליך של הסרה או עדכון של נתונים ב-cache כאשר המקור המקורי משתנה. זהו אחד מהאתגרים הקשים ביותר בעיצוב מערכות.</p>
+<p><strong>האתגר:</strong> אם cache מחזיק נתונים ישנים (stale data), המשתמשים יראו מידע לא עדכני. אם מחדשים cache כל הזמן, מאבדים את היתרון שלו.</p>
+<p><strong>גישות נפוצות:</strong></p>
+<ol>
+<li><strong>TTL (Time to Live)</strong> — כל פריט ב-cache מוגדר לפוג אחרי זמן מסוים. פשוט אך עלול לגרום ל-stale data עד ה-expiry</li>
+<li><strong>Event-driven invalidation</strong> — כשנתון משתנה ב-DB, נשלח event שמוחק/מעדכן ב-cache. עדכני יותר אך מורכב</li>
+<li><strong>Write-through</strong> — כתיבה מתרחשת גם ב-cache וגם ב-DB. Cache תמיד עדכני אך כתיבות איטיות יותר</li>
+<li><strong>Cache-aside (Lazy Loading)</strong> — האפליקציה בודקת cache, אם miss קוראת מ-DB ומכניסה ל-cache. פשוט אך cache יכול להיות ריק בהתחלה</li>
+</ol>
+<p><strong>Cache stampede (Thundering Herd):</strong> כאשר cache item פג ובאותו רגע הרבה requests מגיעים, כולם מנסים לרנדר את הנתון מ-DB בו-זמנית. פתרון: probabilistic early expiration, distributed locking.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>&quot;There are only two hard things in CS: cache invalidation and naming things&quot;</li>
+<li>TTL פשוט אך לא מתאים לנתונים קריטיים</li>
+<li>Write-through מבטיח עקביות אך מוסיף latency לכתיבות</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה ההבדל בין Write-Through ל-Write-Back Cache?</h3>
+<p><strong>תשובה:</strong>
+<strong>Write-Through Cache:</strong>
+כאשר נכתב נתון, הוא נכתב גם ל-cache וגם ל-database באותה פעולה. הקריאה הבאה תמצא את הנתון העדכני ב-cache.</p>
+<p>יתרונות: cache תמיד עדכני, אין אובדן נתונים
+חסרונות: כל כתיבה כרוכה בשתי פעולות (cache + DB) = latency גבוה יותר לכתיבות</p>
+<p><strong>Write-Back (Write-Behind) Cache:</strong>
+כאשר נכתב נתון, הוא נכתב תחילה ל-cache בלבד ומסומן כ&quot;dirty&quot;. הכתיבה ל-DB מתרחשת מאוחר יותר, בצורה async.</p>
+<p>יתרונות: כתיבות מהירות מאוד (רק ל-memory), ניתן לאגד כתיבות ל-DB (write batching)
+חסרונות: אם cache node נכשל לפני שהנתון נכתב ל-DB, הנתון אובד!</p>
+<p><strong>Write-Around:</strong>
+כתיבה הולכת ישירות ל-DB, עוקפת את ה-cache. מתאים לנתונים שנכתבים פעם אחת ואינם נקראים מיד.</p>
+<p><strong>מתי להשתמש:</strong></p>
+<ul>
+<li>Write-Through: כשעקביות קריטית (פיננסים, הזמנות)</li>
+<li>Write-Back: כשביצועי כתיבה קריטיים ויש סבילות לאובדן נתונים קטן (logging, analytics)</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Write-Through = עקביות, Write-Back = ביצועים</li>
+<li>Write-Back מסוכן בלי persistence ל-cache</li>
+<li>הבחירה תלויה בדרישות consistency ו-performance</li>
+</ul>
+<hr>
+<h3>שאלה 5: מה זה CDN ואיך זה עובד?</h3>
+<p><strong>תשובה:</strong>
+CDN (Content Delivery Network) הוא רשת של שרתים גיאוגרפית מפוזרת שמשרתת תוכן סטטי ודינמי למשתמשים מהשרת הקרוב אליהם ביותר.</p>
+<p><strong>כיצד CDN עובד:</strong></p>
+<ol>
+<li>משתמש מבקש resource (תמונה, CSS, JS)</li>
+<li>DNS מפנה לשרת CDN הקרוב ביותר (PoP — Point of Presence)</li>
+<li>אם הקובץ קיים ב-CDN cache (cache hit) — מוחזר מיד</li>
+<li>אם לא (cache miss) — CDN מביא מה-origin server, שומר ב-cache, ומחזיר למשתמש</li>
+</ol>
+<p><strong>מה מטמינים ב-CDN:</strong></p>
+<ul>
+<li>Static assets: images, CSS, JavaScript, videos</li>
+<li>HTML דפים (עם TTL מתאים)</li>
+<li>API responses שלא משתנים תדיר</li>
+</ul>
+<p><strong>יתרונות CDN:</strong></p>
+<ul>
+<li>Reduced latency — תוכן מגיע ממיקום גיאוגרפי קרוב</li>
+<li>DDoS protection — מסנן traffic זדוני</li>
+<li>מפחית עומס על origin server</li>
+<li>Cost savings — bandwidth זולה יותר דרך CDN</li>
+</ul>
+<p><strong>שחקנים עיקריים:</strong> CloudFront (AWS), Cloudflare, Akamai, Fastly</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>CDN = cache גיאוגרפי לתוכן סטטי</li>
+<li>יש לשים לב ל-cache invalidation בעת deploy חדש (cache busting)</li>
+<li>CDN יכול גם לשפר security (WAF, DDoS protection)</li>
+</ul>
+<h2>סיכום</h2>
+<p>Caching הוא אחד מהכלים החשובים ביותר לשיפור ביצועים ומדרגיות. הבנת ה-trade-offs בין consistency לביצועים, ובחירת אסטרטגיית cache invalidation נכונה, הם מפתח לעיצוב מערכות בריאות. Redis הוא הכלי הנפוץ ביותר לאפליקציה-level cache, וCDN לתוכן סטטי. בראיון, הראה שאתה מבין מה cache מתאים לאחסן ומה לא, ואיך להתמודד עם stale data.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Redis Documentation (redis.io)</li>
+<li>AWS ElastiCache Developer Guide</li>
+<li>Cloudflare Learning — CDN</li>
+<li>Designing Data-Intensive Applications — Chapter 5</li>
+</ul>

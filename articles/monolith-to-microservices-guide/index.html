@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>From Monolith to Microservices: A Practical Migration Guide — TechAI Explained</title>
+  <meta name="description" content="A battle-tested, step-by-step guide to decomposing a monolith into microservices — covering the Strangler Fig pattern, data decomposition, and the mistakes that derail most migrations.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Architecture</span>
+      <time>March 12, 2026</time>
+      <span class="read-time">14 min read</span>
+    </div>
+    <h1>From Monolith to Microservices: A Practical Migration Guide</h1>
+    <p class="subtitle">A battle-tested, step-by-step guide to decomposing a monolith into microservices — covering the Strangler Fig pattern, data decomposition, and the mistakes that derail most migrations.</p>
+  </header>
+  <div class="article-body">
+    <p>Most monolith-to-microservices migrations fail. Not because the target architecture is wrong, but because teams try to do it all at once. This guide covers the incremental approach that actually works in production — using the Strangler Fig pattern, domain-driven decomposition, and data migration strategies that don't require downtime.</p>
+<h2>Should You Even Migrate?</h2>
+<p>Before writing a single line of code, answer these questions honestly:</p>
+<div class="diagram-box">
+MIGRATION DECISION TREE
+<p>Is your monolith blocking team velocity?
+├─ NO ──► Don't migrate. Invest in the monolith.
+│         A well-structured monolith is fine.
+│
+└─ YES: Why?
+├─ Deployment coupling (one team blocks others)
+│   └─► Microservices might help.
+│
+├─ Scaling (one hot path needs 10x resources)
+│   └─► Extract just that service.
+│
+├─ Technology mismatch (need ML in Python, app is C#)
+│   └─► Extract the boundary where tech changes.
+│
+└─ &quot;Everyone else is doing it&quot;
+└─► DON'T migrate. This is not a reason.</p>
+</div>
+<blockquote>
+<p><strong>Rule of thumb:</strong> If you can't articulate which specific bounded context you'd extract first and why, you're not ready to migrate.</p>
+</blockquote>
+<h2>Phase 1: Understand Your Monolith</h2>
+<h3>Map the Domain Boundaries</h3>
+<p>Before decomposing, you need to understand what you're decomposing. Use Event Storming or a simpler approach — map every major feature to its data dependencies.</p>
+<pre><code>Feature → Tables Accessed → External APIs Called
+
+User Registration → users, profiles, email_verification → SendGrid
+Order Placement → orders, order_items, inventory, payments → Stripe
+Product Search → products, categories, reviews → Elasticsearch
+Shipping → orders, shipments, addresses → FedEx API
+Reporting → orders, users, products, shipments → (none)
+</code></pre>
+<h3>Identify Bounded Contexts</h3>
+<p>Group features that share data and change together:</p>
+<div class="diagram-box">
+BOUNDED CONTEXTS (identified from data dependencies)
+<p>┌──────────────────┐  ┌──────────────────┐
+│   IDENTITY       │  │   CATALOG        │
+│                  │  │                  │
+│  users           │  │  products        │
+│  profiles        │  │  categories      │
+│  email_verify    │  │  reviews         │
+│  auth_tokens     │  │  search_index    │
+│                  │  │                  │
+│  Registration    │  │  Product CRUD    │
+│  Login/Logout    │  │  Search          │
+│  Profile mgmt   │  │  Review system   │
+└──────────────────┘  └──────────────────┘</p>
+<p>┌──────────────────┐  ┌──────────────────┐
+│   ORDERING       │  │   SHIPPING       │
+│                  │  │                  │
+│  orders          │  │  shipments       │
+│  order_items     │  │  addresses       │
+│  payments        │  │  tracking        │
+│  inventory       │  │                  │
+│                  │  │  Label creation  │
+│  Cart            │  │  Tracking        │
+│  Checkout        │  │  Delivery notify │
+│  Payment         │  │                  │
+└──────────────────┘  └──────────────────┘</p>
+</div>
+<h3>Measure Coupling</h3>
+<p>Find the cross-boundary queries. These are the painful parts of migration:</p>
+<pre><code class="language-sql">-- This query spans Ordering + Catalog + Identity
+SELECT o.id, u.name, p.title, o.total
+FROM orders o
+JOIN users u ON o.user_id = u.id
+JOIN order_items oi ON o.id = oi.order_id
+JOIN products p ON oi.product_id = p.id
+WHERE o.created_at &gt; '2026-01-01';
+</code></pre>
+<p>Every cross-boundary join becomes an API call after migration. Count them. Prioritize decomposing contexts with the <strong>fewest</strong> cross-boundary dependencies first.</p>
+<h2>Phase 2: The Strangler Fig Pattern</h2>
+<p>Don't rewrite the monolith. Strangle it — gradually routing traffic from the monolith to new services until the monolith is empty.</p>
+<div class="diagram-box">
+STRANGLER FIG PATTERN (over time)
+<p>STEP 1: Route through a facade
+┌──────────┐     ┌──────────┐     ┌──────────────┐
+│  Client  │────►│  Facade  │────►│  Monolith    │
+│          │     │ (Gateway) │     │  (all code)  │
+└──────────┘     └──────────┘     └──────────────┘</p>
+<p>STEP 2: Extract first service
+┌──────────┐     ┌──────────┐     ┌──────────────┐
+│  Client  │────►│  Facade  │──┬─►│  Monolith    │
+│          │     │ (Gateway) │  │  │  (minus      │
+└──────────┘     └──────────┘  │  │   catalog)   │
+│  └──────────────┘
+│  ┌──────────────┐
+└─►│  Catalog     │
+│  Service     │
+└──────────────┘</p>
+<p>STEP 3: Extract more services
+┌──────────┐     ┌──────────┐     ┌──────────────┐
+│  Client  │────►│  Facade  │──┬─►│  Monolith    │
+│          │     │ (Gateway) │  │  │  (shrinking) │
+└──────────┘     └──────────┘  │  └──────────────┘
+├─►│ Catalog Svc  │
+├─►│ Identity Svc │
+└─►│ Shipping Svc │</p>
+<p>STEP 4: Monolith is gone
+┌──────────┐     ┌──────────┐
+│  Client  │────►│  Gateway  │──┬─► Catalog
+│          │     │           │  ├─► Identity
+└──────────┘     └──────────┘  ├─► Ordering
+└─► Shipping</p>
+</div>
+<h3>Implementing the Facade</h3>
+<p>Use an API gateway (NGINX, Kong, or a cloud-native option) as the strangler facade:</p>
+<pre><code class="language-yaml"># nginx.conf - route by path
+upstream monolith {
+  server monolith:8080;
+}
+
+upstream catalog_service {
+  server catalog:8080;
+}
+
+server {
+  listen 80;
+
+  # New service handles catalog
+  location /api/products {
+    proxy_pass http://catalog_service;
+  }
+
+  location /api/categories {
+    proxy_pass http://catalog_service;
+  }
+
+  # Everything else goes to monolith
+  location / {
+    proxy_pass http://monolith;
+  }
+}
+</code></pre>
+<h2>Phase 3: Extract Your First Service</h2>
+<p>Choose the bounded context with:</p>
+<ol>
+<li><strong>Fewest dependencies</strong> on other contexts</li>
+<li><strong>Clearest data ownership</strong> (tables belong only to this context)</li>
+<li><strong>Highest business value</strong> for being independently deployable</li>
+</ol>
+<p>Often this is the <strong>Catalog</strong> or <strong>Identity</strong> context.</p>
+<h3>Step 1: Create the New Service</h3>
+<pre><code class="language-typescript">// catalog-service/src/index.ts
+import express from 'express';
+import { Pool } from 'pg';
+
+const app = express();
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Replicate the monolith's API contract exactly
+app.get('/api/products', async (req, res) =&gt; {
+  const { rows } = await pool.query(
+    'SELECT * FROM products ORDER BY created_at DESC LIMIT $1',
+    [req.query.limit || 50]
+  );
+  res.json(rows);
+});
+
+app.get('/api/products/:id', async (req, res) =&gt; {
+  const { rows } = await pool.query(
+    'SELECT * FROM products WHERE id = $1',
+    [req.params.id]
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+});
+
+app.listen(8080);
+</code></pre>
+<h3>Step 2: Run Both in Parallel</h3>
+<p>The <strong>parallel run</strong> pattern validates the new service before cutting over:</p>
+<pre><code class="language-typescript">// In the API gateway or facade
+app.get('/api/products/:id', async (req, res) =&gt; {
+  // Primary: monolith (still serving traffic)
+  const monolithResponse = await fetch(
+    `http://monolith:8080/api/products/${req.params.id}`
+  );
+
+  // Shadow: new service (results compared, not returned)
+  const newServiceResponse = await fetch(
+    `http://catalog:8080/api/products/${req.params.id}`
+  ).catch(err =&gt; ({ error: err.message }));
+
+  // Compare responses
+  if (JSON.stringify(monolithResponse) !== JSON.stringify(newServiceResponse)) {
+    metrics.increment('catalog.migration.mismatch');
+    logger.warn('Response mismatch', {
+      monolith: monolithResponse,
+      newService: newServiceResponse,
+    });
+  }
+
+  // Still return the monolith response
+  res.json(await monolithResponse.json());
+});
+</code></pre>
+<h3>Step 3: Cut Over</h3>
+<p>Once the mismatch rate is zero, switch the gateway to route to the new service.</p>
+<h2>Phase 4: Data Decomposition</h2>
+<p>This is where most migrations stall. The monolith's database has cross-context foreign keys, shared tables, and reporting queries that span everything.</p>
+<h3>Strategy 1: Shared Database (Temporary)</h3>
+<p>Start by letting the new service read from the monolith's database:</p>
+<pre><code>┌──────────────┐     ┌──────────────┐
+│   Monolith   │     │  Catalog Svc │
+│              │     │              │
+└──────┬───────┘     └──────┬───────┘
+       │                    │
+       └────────┬───────────┘
+                │
+       ┌────────┴────────┐
+       │  Shared Database │  ← Temporary!
+       │  (monolith DB)   │
+       └─────────────────┘
+</code></pre>
+<p><strong>This is not the end state.</strong> It's a stepping stone. The service works, but you haven't achieved data independence.</p>
+<h3>Strategy 2: Database per Service (Target)</h3>
+<p>Migrate the service's tables to its own database:</p>
+<pre><code>┌──────────────┐     ┌──────────────┐
+│   Monolith   │     │  Catalog Svc │
+│              │     │              │
+└──────┬───────┘     └──────┬───────┘
+       │                    │
+┌──────┴───────┐    ┌──────┴───────┐
+│ Monolith DB  │    │ Catalog DB   │
+│ (minus       │    │ products     │
+│  products)   │    │ categories   │
+└──────────────┘    │ reviews      │
+                    └──────────────┘
+</code></pre>
+<h3>Data Migration Script</h3>
+<pre><code class="language-python"># migrate_catalog_data.py
+import psycopg2
+from datetime import datetime
+
+source = psycopg2.connect(SOURCE_DB_URL)
+target = psycopg2.connect(TARGET_DB_URL)
+
+# Phase 1: Copy historical data
+with source.cursor() as src, target.cursor() as tgt:
+    src.execute(&quot;SELECT * FROM products&quot;)
+    for row in src:
+        tgt.execute(
+            &quot;INSERT INTO products VALUES (%s, %s, %s, %s, %s) &quot;
+            &quot;ON CONFLICT (id) DO NOTHING&quot;,
+            row
+        )
+    target.commit()
+
+# Phase 2: Set up CDC (Change Data Capture) for ongoing sync
+# Use Debezium, AWS DMS, or a custom trigger
+</code></pre>
+<h3>Handling Cross-Service Queries</h3>
+<p>The reporting query that joined <code>orders</code>, <code>users</code>, and <code>products</code> now spans three services. Options:</p>
+<ol>
+<li><strong>API Composition</strong> — the gateway calls each service and joins in memory</li>
+<li><strong>CQRS Read Model</strong> — a denormalized read database updated by events</li>
+<li><strong>Data Lake</strong> — services publish events, analytics queries run against the lake</li>
+</ol>
+<pre><code class="language-typescript">// API Composition pattern
+app.get('/api/reports/orders', async (req, res) =&gt; {
+  const orders = await orderService.getOrders(req.query);
+  
+  // Enrich with data from other services
+  const userIds = [...new Set(orders.map(o =&gt; o.userId))];
+  const productIds = [...new Set(orders.flatMap(o =&gt; o.items.map(i =&gt; i.productId)))];
+
+  const [users, products] = await Promise.all([
+    identityService.getUsersByIds(userIds),
+    catalogService.getProductsByIds(productIds),
+  ]);
+
+  const enriched = orders.map(order =&gt; ({
+    ...order,
+    user: users.find(u =&gt; u.id === order.userId),
+    items: order.items.map(item =&gt; ({
+      ...item,
+      product: products.find(p =&gt; p.id === item.productId),
+    })),
+  }));
+
+  res.json(enriched);
+});
+</code></pre>
+<h2>The Top 5 Migration Mistakes</h2>
+<h3>1. Big Bang Rewrite</h3>
+<blockquote>
+<p>&quot;Let's rewrite the entire monolith in microservices over 6 months.&quot;</p>
+</blockquote>
+<p>This fails because:</p>
+<ul>
+<li>Requirements change during the rewrite</li>
+<li>The team maintains two systems simultaneously</li>
+<li>Integration testing the new system is harder than expected</li>
+<li>Stakeholders lose patience before it's done</li>
+</ul>
+<p><strong>Fix:</strong> Strangler Fig. Extract one service at a time, validate it works, then move to the next.</p>
+<h3>2. Starting with the Wrong Service</h3>
+<p>Teams often extract the most complex, most coupled service first because &quot;that's where the pain is.&quot; This maximizes risk.</p>
+<p><strong>Fix:</strong> Start with a low-coupling, low-risk context. Get the infrastructure (CI/CD, service mesh, monitoring) right on something simple.</p>
+<h3>3. Distributed Monolith</h3>
+<p>Services that can't be deployed independently, that share a database, and that require coordinated releases — you've built a distributed monolith. All the complexity of microservices, none of the benefits.</p>
+<p><strong>Fix:</strong> Each service must own its data and be independently deployable. If two services always deploy together, merge them.</p>
+<h3>4. Ignoring Data Consistency</h3>
+<p>In a monolith, database transactions guarantee consistency. In microservices, you need eventual consistency patterns:</p>
+<pre><code class="language-typescript">// Saga pattern for cross-service transactions
+class OrderSaga {
+  async execute(order: Order) {
+    try {
+      await inventoryService.reserve(order.items);
+      await paymentService.charge(order.total);
+      await orderService.confirm(order.id);
+    } catch (error) {
+      // Compensating transactions
+      await inventoryService.release(order.items);
+      await paymentService.refund(order.total);
+      await orderService.cancel(order.id);
+      throw error;
+    }
+  }
+}
+</code></pre>
+<h3>5. No Observability</h3>
+<p>You can't debug a distributed system with <code>console.log</code>. Before extracting the first service:</p>
+<ul>
+<li>Set up distributed tracing (OpenTelemetry)</li>
+<li>Centralize logs with correlation IDs</li>
+<li>Create dashboards for latency, error rates, and throughput per service</li>
+</ul>
+<h2>Migration Timeline (Realistic)</h2>
+<p>For a medium-sized monolith (50K-200K lines of code):</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Duration</th>
+<th>Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Domain analysis</td>
+<td>2-4 weeks</td>
+<td>Bounded context map, dependency graph</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td>4-6 weeks</td>
+<td>CI/CD, gateway, monitoring, service mesh</td>
+</tr>
+<tr>
+<td>First service</td>
+<td>4-8 weeks</td>
+<td>One service extracted, validated, in production</td>
+</tr>
+<tr>
+<td>Second service</td>
+<td>3-6 weeks</td>
+<td>Second extraction (faster due to patterns)</td>
+</tr>
+<tr>
+<td>Remaining services</td>
+<td>3-4 weeks each</td>
+<td>Incremental extraction</td>
+</tr>
+<tr>
+<td>Data decomposition</td>
+<td>Ongoing</td>
+<td>Parallel with service extraction</td>
+</tr>
+<tr>
+<td>Decommission monolith</td>
+<td>2-4 weeks</td>
+<td>Final cleanup, remove monolith</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 6-18 months</strong> depending on monolith size and team experience.</p>
+<h2>Checklist Before You Start</h2>
+<ul>
+<li>[ ] Can you articulate why microservices (not &quot;everyone does it&quot;)</li>
+<li>[ ] Have you mapped bounded contexts and data dependencies</li>
+<li>[ ] Do you have a CI/CD pipeline that can deploy services independently</li>
+<li>[ ] Is distributed tracing and centralized logging set up</li>
+<li>[ ] Have you chosen your first service to extract (low coupling)</li>
+<li>[ ] Do stakeholders understand this is a 6-18 month journey</li>
+<li>[ ] Is the team trained on eventual consistency and distributed systems patterns</li>
+</ul>
+<p>If you can't check every box, invest in those items before starting the migration. The infrastructure and organizational readiness matter more than the code.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

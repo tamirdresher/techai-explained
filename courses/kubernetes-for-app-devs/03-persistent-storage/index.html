@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 3: Persistent Storage — PVs, PVCs, and StorageClasses — TechAI Explained</title>
+  <meta name="description" content="How Kubernetes handles persistent data — PersistentVolumes, PersistentVolumeClaims, StorageClasses, and the patterns for running stateful workloads.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Kubernetes Course</span>
+      <time>March 6, 2026</time>
+      <span class="read-time">15 min read</span>
+    </div>
+    <h1>Lesson 3: Persistent Storage — PVs, PVCs, and StorageClasses</h1>
+    <p class="subtitle">How Kubernetes handles persistent data — PersistentVolumes, PersistentVolumeClaims, StorageClasses, and the patterns for running stateful workloads.</p>
+  </header>
+  <div class="article-body">
+    <p>Containers are ephemeral — when a Pod dies, its filesystem is gone. For databases, file uploads, and caches that survive restarts, you need <strong>persistent storage</strong>. Kubernetes abstracts storage through three resources: PersistentVolumes (PVs), PersistentVolumeClaims (PVCs), and StorageClasses.</p>
+<h2>The Storage Model</h2>
+<div class="diagram-box">
+KUBERNETES STORAGE ABSTRACTION
+<p>┌──────────────────────────────────────────────────┐
+│  YOUR POD                                        │
+│  ┌────────────────────────────────┐              │
+│  │  Container                    │              │
+│  │  /data/uploads  ◄── mounted   │              │
+│  └──────────────────┬────────────┘              │
+│                     │ volumeMount               │
+│  ┌──────────────────┴────────────┐              │
+│  │  PersistentVolumeClaim (PVC)  │ ◄── Request  │
+│  │  &quot;I need 10Gi of SSD storage&quot; │              │
+│  └──────────────────┬────────────┘              │
+└─────────────────────┼────────────────────────────┘
+│ binds to
+┌─────────────────────┴────────────────────────────┐
+│  PersistentVolume (PV)                           │
+│  &quot;Here is 10Gi of SSD storage on Azure Disk&quot;    │
+│                                                  │
+│  Backed by: Azure Disk / AWS EBS / GCE PD /     │
+│             NFS / local SSD / ...                │
+└──────────────────────────────────────────────────┘</p>
+</div>
+<p>Think of it like renting:</p>
+<ul>
+<li><strong>PVC</strong> = &quot;I need a 2-bedroom apartment&quot; (the request)</li>
+<li><strong>PV</strong> = &quot;Here's apartment 4B on the 3rd floor&quot; (the actual resource)</li>
+<li><strong>StorageClass</strong> = &quot;Luxury apartments vs economy apartments&quot; (the tier)</li>
+</ul>
+<h2>PersistentVolumeClaims (PVCs)</h2>
+<p>As a developer, you almost always work with PVCs. They request storage without knowing where it comes from.</p>
+<pre><code class="language-yaml"># pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-uploads
+spec:
+  accessModes:
+    - ReadWriteOnce        # One node can mount read-write
+  storageClassName: managed-premium   # SSD storage
+  resources:
+    requests:
+      storage: 10Gi        # 10 gigabytes
+</code></pre>
+<h3>Access Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Abbreviation</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ReadWriteOnce</code></td>
+<td>RWO</td>
+<td>One node reads/writes — most common for databases</td>
+</tr>
+<tr>
+<td><code>ReadOnlyMany</code></td>
+<td>ROX</td>
+<td>Many nodes read — shared config, static assets</td>
+</tr>
+<tr>
+<td><code>ReadWriteMany</code></td>
+<td>RWX</td>
+<td>Many nodes read/write — shared file storage (NFS, Azure Files)</td>
+</tr>
+</tbody>
+</table>
+<h3>Using a PVC in a Pod</h3>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file-server
+  template:
+    metadata:
+      labels:
+        app: file-server
+    spec:
+      containers:
+        - name: server
+          image: my-registry/file-server:1.0.0
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: uploads
+              mountPath: /data/uploads    # Where files appear in the container
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: app-uploads        # References the PVC
+</code></pre>
+<p>When the Pod starts, Kubernetes mounts the PVC at <code>/data/uploads</code>. Files written there survive Pod restarts, crashes, and redeployments.</p>
+<h2>StorageClasses</h2>
+<p>StorageClasses define <strong>what kind</strong> of storage is available. Cloud providers come with defaults.</p>
+<pre><code class="language-yaml">apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+provisioner: disk.csi.azure.com    # Azure Managed Disks
+parameters:
+  skuName: Premium_LRS             # Premium SSD
+  kind: Managed
+reclaimPolicy: Delete              # Delete disk when PVC is deleted
+volumeBindingMode: WaitForFirstConsumer  # Don't provision until Pod is scheduled
+allowVolumeExpansion: true         # Allow resizing
+</code></pre>
+<h3>Common StorageClasses by Provider</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Default Class</th>
+<th>SSD Class</th>
+<th>Shared Storage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AKS</td>
+<td><code>default</code> (Standard HDD)</td>
+<td><code>managed-premium</code></td>
+<td><code>azurefile-premium</code></td>
+</tr>
+<tr>
+<td>EKS</td>
+<td><code>gp2</code></td>
+<td><code>gp3</code></td>
+<td><code>efs-sc</code></td>
+</tr>
+<tr>
+<td>GKE</td>
+<td><code>standard</code></td>
+<td><code>premium-rwo</code></td>
+<td><code>standard-rwx</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Reclaim Policies</h3>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Behavior</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Delete</code></td>
+<td>PV and disk deleted when PVC is deleted</td>
+<td>Dev/test environments</td>
+</tr>
+<tr>
+<td><code>Retain</code></td>
+<td>PV and disk preserved when PVC is deleted</td>
+<td>Production databases</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Always use <code>Retain</code> for production databases.</strong> If someone accidentally deletes the PVC, you don't want the data gone too.</p>
+<h2>Dynamic vs Static Provisioning</h2>
+<h3>Dynamic Provisioning (Recommended)</h3>
+<p>You create a PVC, Kubernetes automatically creates the PV and underlying disk:</p>
+<pre><code>Developer creates PVC → StorageClass provisions PV → Cloud creates disk
+</code></pre>
+<p>This is the default behavior. You almost never create PVs manually.</p>
+<h3>Static Provisioning</h3>
+<p>For pre-existing disks (migrated data, shared NFS), create the PV manually:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: legacy-data
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: &quot;&quot;           # Empty = no dynamic provisioning
+  azureDisk:
+    diskName: my-existing-disk
+    diskURI: /subscriptions/.../my-existing-disk
+    kind: Managed
+</code></pre>
+<h2>StatefulSets: Storage for Replicated Services</h2>
+<p>Deployments share one PVC across all replicas (problematic for databases). <strong>StatefulSets</strong> give each replica its own persistent storage.</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres          # Required headless service name
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+  volumeClaimTemplates:          # Each replica gets its OWN PVC
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: [&quot;ReadWriteOnce&quot;]
+        storageClassName: managed-premium
+        resources:
+          requests:
+            storage: 50Gi
+</code></pre>
+<div class="diagram-box">
+STATEFULSET: postgres (replicas: 3)
+<p>postgres-0 ──► pgdata-postgres-0 (50Gi PVC) ──► Azure Disk 1
+postgres-1 ──► pgdata-postgres-1 (50Gi PVC) ──► Azure Disk 2
+postgres-2 ──► pgdata-postgres-2 (50Gi PVC) ──► Azure Disk 3</p>
+<p>Each replica has:</p>
+<ul>
+<li>Stable hostname: postgres-0, postgres-1, postgres-2</li>
+<li>Stable DNS:      postgres-0.postgres.default.svc.cluster.local</li>
+<li>Its OWN persistent disk</li>
+<li>Ordered startup (0 → 1 → 2)</li>
+<li>Ordered shutdown (2 → 1 → 0)</li>
+</ul>
+</div>
+<p>StatefulSets also need a <strong>headless Service</strong> for DNS:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  clusterIP: None               # Headless — no load balancing
+  ports:
+    - port: 5432
+</code></pre>
+<h2>Expanding Volumes</h2>
+<p>If your StorageClass has <code>allowVolumeExpansion: true</code>, you can grow PVCs:</p>
+<pre><code class="language-bash">kubectl patch pvc app-uploads -p '{&quot;spec&quot;:{&quot;resources&quot;:{&quot;requests&quot;:{&quot;storage&quot;:&quot;20Gi&quot;}}}}'
+</code></pre>
+<p>The underlying disk grows automatically. <strong>You cannot shrink volumes</strong> — only expand.</p>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>ReadWriteOnce</code> with multiple replicas</strong> — only one node can mount RWO. Use RWX (Azure Files, EFS) for shared access.</li>
+<li><strong><code>Delete</code> reclaim policy on production data</strong> — use <code>Retain</code> to prevent accidental data loss.</li>
+<li><strong>Not setting <code>volumeBindingMode: WaitForFirstConsumer</code></strong> — without this, the disk may be provisioned in a zone where no node exists.</li>
+<li><strong>Storing state in container filesystem</strong> — any data not on a PVC is lost when the Pod restarts.</li>
+<li><strong>Using Deployments for databases</strong> — use StatefulSets for stable network IDs and per-replica storage.</li>
+</ol>
+<h2>Key Takeaways</h2>
+<ol>
+<li><strong>PVCs</strong> request storage — this is what developers interact with</li>
+<li><strong>PVs</strong> are the actual storage — usually auto-created by the StorageClass</li>
+<li><strong>StorageClasses</strong> define storage tiers — SSD vs HDD, Delete vs Retain</li>
+<li><strong>StatefulSets</strong> give each replica its own persistent storage</li>
+<li><strong>Dynamic provisioning</strong> is the default — you rarely create PVs manually</li>
+<li>Always use <strong><code>Retain</code></strong> reclaim policy for production data</li>
+</ol>
+<p>← <a href="/courses/kubernetes-for-app-devs/02-configmaps-secrets-environment/">Lesson 2: ConfigMaps and Secrets</a> | <a href="/courses/kubernetes-for-app-devs/04-networking-ingress/">Lesson 4: Networking →</a></p>
+<p><em>Part of the Kubernetes for Application Developers course by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

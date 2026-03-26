@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Actions Advanced: Matrix Builds, Reusable Workflows, and OIDC — TechAI Explained</title>
+  <meta name="description" content="Level up your CI/CD with GitHub Actions advanced patterns — matrix strategies for multi-platform testing, reusable workflows for DRY pipelines, and OIDC for secretless cloud deployments.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">DevOps</span>
+      <time>March 10, 2026</time>
+      <span class="read-time">12 min read</span>
+    </div>
+    <h1>GitHub Actions Advanced: Matrix Builds, Reusable Workflows, and OIDC</h1>
+    <p class="subtitle">Level up your CI/CD with GitHub Actions advanced patterns — matrix strategies for multi-platform testing, reusable workflows for DRY pipelines, and OIDC for secretless cloud deployments.</p>
+  </header>
+  <div class="article-body">
+    <p>If your GitHub Actions workflows are still a single YAML file with hardcoded values, you're leaving most of the platform's power on the table. This guide covers the three patterns that separate basic CI/CD from production-grade pipelines: matrix builds, reusable workflows, and OIDC authentication.</p>
+<h2>Matrix Builds: Test Everything in Parallel</h2>
+<p>Matrix strategies let you run the same job across multiple configurations simultaneously — different OS versions, language versions, or any variable you define.</p>
+<h3>Basic Matrix</h3>
+<pre><code class="language-yaml">name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18, 20, 22]
+      fail-fast: false  # Don't cancel other jobs if one fails
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      
+      - run: npm ci
+      - run: npm test
+</code></pre>
+<p>This creates <strong>9 parallel jobs</strong> (3 OS × 3 Node versions). Without matrix, you'd copy-paste the same job 9 times.</p>
+<div class="diagram-box">
+MATRIX EXPANSION: 3 OS × 3 Node = 9 parallel jobs
+<p>ubuntu-latest + Node 18  ──► ✅
+ubuntu-latest + Node 20  ──► ✅
+ubuntu-latest + Node 22  ──► ✅
+windows-latest + Node 18 ──► ✅
+windows-latest + Node 20 ──► ❌ (test failure)
+windows-latest + Node 22 ──► ✅
+macos-latest + Node 18   ──► ✅
+macos-latest + Node 20   ──► ✅
+macos-latest + Node 22   ──► ✅</p>
+<p>fail-fast: false → all 9 run even if one fails
+fail-fast: true  → cancel remaining after first failure</p>
+</div>
+<h3>Advanced Matrix: Include and Exclude</h3>
+<pre><code class="language-yaml">strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest]
+    node-version: [18, 20, 22]
+    
+    # Add specific combinations with extra variables
+    include:
+      - os: ubuntu-latest
+        node-version: 22
+        coverage: true        # Only run coverage on one combo
+        experimental: false
+      
+      - os: ubuntu-latest
+        node-version: 23      # Add a version not in the base matrix
+        experimental: true    # Mark as allowed-to-fail
+    
+    # Remove specific combinations
+    exclude:
+      - os: windows-latest
+        node-version: 18      # Don't test Node 18 on Windows
+</code></pre>
+<h3>Using Matrix Variables in Steps</h3>
+<pre><code class="language-yaml">steps:
+  - run: npm test
+  
+  - name: Upload coverage
+    if: matrix.coverage == true
+    run: npm run coverage &amp;&amp; npx codecov
+  
+  - name: Mark experimental as non-blocking
+    if: matrix.experimental == true
+    continue-on-error: true
+    run: npm run test:experimental
+</code></pre>
+<h3>Dynamic Matrix from JSON</h3>
+<p>For maximum flexibility, generate the matrix dynamically:</p>
+<pre><code class="language-yaml">jobs:
+  determine-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          # Could read from a file, API, or compute dynamically
+          echo 'matrix={&quot;include&quot;:[
+            {&quot;project&quot;:&quot;api&quot;,&quot;dockerfile&quot;:&quot;api/Dockerfile&quot;},
+            {&quot;project&quot;:&quot;web&quot;,&quot;dockerfile&quot;:&quot;web/Dockerfile&quot;},
+            {&quot;project&quot;:&quot;worker&quot;,&quot;dockerfile&quot;:&quot;worker/Dockerfile&quot;}
+          ]}' &gt;&gt; $GITHUB_OUTPUT
+
+  build:
+    needs: determine-matrix
+    strategy:
+      matrix: ${{ fromJSON(needs.determine-matrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f ${{ matrix.dockerfile }} -t ${{ matrix.project }} .
+</code></pre>
+<h2>Reusable Workflows: DRY CI/CD</h2>
+<p>If you have 20 repositories with nearly identical CI workflows, reusable workflows let you define the pipeline once and call it from everywhere.</p>
+<h3>Create a Reusable Workflow</h3>
+<pre><code class="language-yaml"># .github/workflows/build-and-deploy.yml (in your shared repo)
+name: Build and Deploy
+
+on:
+  workflow_call:  # This makes it reusable
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: &quot;Target environment (staging, production)&quot;
+      node-version:
+        required: false
+        type: number
+        default: 20
+      run-e2e:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+      
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      
+      - name: E2E Tests
+        if: inputs.run-e2e
+        run: npm run test:e2e
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+      
+      - name: Deploy
+        run: ./deploy.sh ${{ inputs.environment }}
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      
+      - name: Notify Slack
+        if: always() &amp;&amp; secrets.SLACK_WEBHOOK != ''
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d '{&quot;text&quot;:&quot;Deploy to ${{ inputs.environment }}: ${{ job.status }}&quot;}'
+</code></pre>
+<h3>Call the Reusable Workflow</h3>
+<pre><code class="language-yaml"># In any consuming repository
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: my-org/shared-workflows/.github/workflows/build-and-deploy.yml@main
+    with:
+      environment: staging
+      node-version: 22
+      run-e2e: true
+    secrets:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+</code></pre>
+<h3>Composite Actions: Reusable Steps</h3>
+<p>For reusing a sequence of steps (not full workflows), use composite actions:</p>
+<pre><code class="language-yaml"># .github/actions/setup-and-build/action.yml
+name: Setup and Build
+description: Install dependencies and build the project
+
+inputs:
+  node-version:
+    description: Node.js version
+    default: '20'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+    
+    - run: npm ci
+      shell: bash
+    
+    - run: npm run build
+      shell: bash
+    
+    - run: npm run lint
+      shell: bash
+</code></pre>
+<p>Use it in any workflow:</p>
+<pre><code class="language-yaml">steps:
+  - uses: actions/checkout@v4
+  - uses: my-org/shared-actions/.github/actions/setup-and-build@main
+    with:
+      node-version: 22
+  - run: npm test
+</code></pre>
+<div class="diagram-box">
+REUSABLE WORKFLOWS vs COMPOSITE ACTIONS
+<p>Reusable Workflows              Composite Actions
+────────────────────            ──────────────────
+Reuse entire JOBS               Reuse STEPS within a job
+Called with <code>uses:</code> at job      Called with <code>uses:</code> at step
+level                           level</p>
+<p>Can define multiple jobs        Single sequence of steps
+Have their own runner           Run on the caller's runner
+Can accept secrets              Cannot accept secrets
+Separate workflow file          action.yml in a directory</p>
+<p>USE WHEN:                       USE WHEN:
+Full CI/CD pipeline             Shared setup/teardown steps
+Multi-job orchestration         Linting, building, caching
+Environment-specific deploys    Common action sequences</p>
+</div>
+<h2>OIDC: Secretless Cloud Deployments</h2>
+<p>OpenID Connect (OIDC) eliminates stored cloud credentials. Instead of storing an AWS access key or Azure service principal secret in GitHub, the workflow requests a short-lived token directly from the cloud provider.</p>
+<h3>How OIDC Works</h3>
+<div class="diagram-box">
+TRADITIONAL (with secrets)       OIDC (secretless)
+──────────────────────────       ─────────────────
+<ol>
+<li>
+<p>Store cloud credentials      1. Configure trust between
+in GitHub Secrets               GitHub and cloud provider</p>
+</li>
+<li>
+<p>Workflow reads secret         2. Workflow requests JWT
+from secrets context             from GitHub's OIDC provider</p>
+</li>
+<li>
+<p>Use credential to auth       3. Exchange JWT for short-lived
+with cloud provider              cloud credential</p>
+</li>
+<li>
+<p>Credential is long-lived     4. Credential expires in minutes
+(rotate manually)               (no rotation needed)</p>
+</li>
+</ol>
+<p>RISK: Secret leak = full        RISK: Minimal — tokens are
+access until rotated            scoped and short-lived</p>
+</div>
+<h3>Azure OIDC Setup</h3>
+<p><strong>Step 1: Create a federated credential in Azure</strong></p>
+<pre><code class="language-bash"># Create an app registration
+az ad app create --display-name &quot;github-actions-deploy&quot;
+APP_ID=$(az ad app list --display-name &quot;github-actions-deploy&quot; --query '[0].appId' -o tsv)
+
+# Create a service principal
+az ad sp create --id $APP_ID
+
+# Add federated credential for GitHub Actions
+az ad app federated-credential create --id $APP_ID --parameters '{
+  &quot;name&quot;: &quot;github-main-branch&quot;,
+  &quot;issuer&quot;: &quot;https://token.actions.githubusercontent.com&quot;,
+  &quot;subject&quot;: &quot;repo:my-org/my-repo:ref:refs/heads/main&quot;,
+  &quot;audiences&quot;: [&quot;api://AzureADTokenExchange&quot;]
+}'
+
+# Assign roles
+az role assignment create \
+  --assignee $APP_ID \
+  --role &quot;Contributor&quot; \
+  --scope &quot;/subscriptions/YOUR_SUB_ID&quot;
+</code></pre>
+<p><strong>Step 2: Use in your workflow</strong></p>
+<pre><code class="language-yaml">name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          # No secret needed! OIDC handles authentication
+
+      - run: az webapp deploy --name myapp --src-path ./dist
+</code></pre>
+<h3>AWS OIDC Setup</h3>
+<pre><code class="language-yaml">permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789:role/github-actions
+          aws-region: us-east-1
+          # No AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY needed!
+      
+      - run: aws s3 sync ./dist s3://my-bucket/
+</code></pre>
+<h3>OIDC Subject Claims</h3>
+<p>Control which workflows can assume which roles:</p>
+<pre><code>repo:my-org/my-repo:ref:refs/heads/main         → Only main branch
+repo:my-org/my-repo:environment:production       → Only production env
+repo:my-org/my-repo:pull_request                 → Any PR
+repo:my-org/my-repo:ref:refs/tags/v*             → Only version tags
+</code></pre>
+<p>This means a PR workflow <strong>cannot</strong> assume the production deployment role. Security by design.</p>
+<h2>Putting It All Together</h2>
+<p>Here's a production pipeline combining all three patterns:</p>
+<pre><code class="language-yaml">name: Full Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Matrix: test across platforms
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-and-build  # Composite action
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+
+  # Reusable workflow: deploy to staging
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+    secrets: inherit
+
+  # OIDC: deploy to production
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production  # Requires approval
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: ./deploy.sh production
+</code></pre>
+<h2>Common Pitfalls</h2>
+<ol>
+<li><strong>Not using <code>fail-fast: false</code></strong> — one flaky test cancels all matrix jobs</li>
+<li><strong>Storing cloud secrets</strong> — use OIDC instead; it's more secure and no rotation needed</li>
+<li><strong>Copy-pasting workflows</strong> — use reusable workflows and composite actions</li>
+<li><strong>No caching</strong> — always cache <code>node_modules</code>, <code>~/.m2</code>, <code>~/.gradle</code>, etc.</li>
+<li><strong>Overly broad OIDC subjects</strong> — scope to specific branches and environments</li>
+</ol>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

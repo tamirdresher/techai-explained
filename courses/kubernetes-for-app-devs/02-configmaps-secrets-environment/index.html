@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 2: ConfigMaps, Secrets, and Environment Management — TechAI Explained</title>
+  <meta name="description" content="How to configure applications in Kubernetes — environment variables, config files, secrets management, and the patterns that keep configuration maintainable across environments.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Kubernetes Course</span>
+      <time>March 7, 2026</time>
+      <span class="read-time">15 min read</span>
+    </div>
+    <h1>Lesson 2: ConfigMaps, Secrets, and Environment Management</h1>
+    <p class="subtitle">How to configure applications in Kubernetes — environment variables, config files, secrets management, and the patterns that keep configuration maintainable across environments.</p>
+  </header>
+  <div class="article-body">
+    <p>Your application needs configuration — database URLs, API keys, feature flags, log levels. In Kubernetes, you use <strong>ConfigMaps</strong> for non-sensitive config and <strong>Secrets</strong> for sensitive data. They decouple configuration from your container image so the same image runs in dev, staging, and production with different settings.</p>
+<h2>ConfigMaps: Non-Sensitive Configuration</h2>
+<p>A ConfigMap stores key-value pairs or entire configuration files.</p>
+<h3>Creating ConfigMaps</h3>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  LOG_LEVEL: &quot;info&quot;
+  MAX_CONNECTIONS: &quot;100&quot;
+  FEATURE_NEW_CHECKOUT: &quot;true&quot;
+  CORS_ORIGINS: &quot;https://app.example.com,https://admin.example.com&quot;
+</code></pre>
+<p><strong>From a configuration file:</strong></p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    server {
+      listen 80;
+      location / {
+        proxy_pass http://my-api:8080;
+        proxy_set_header Host $host;
+      }
+    }
+</code></pre>
+<h3>Using ConfigMaps as Environment Variables</h3>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      image: my-registry/my-api:1.0.0
+
+      # Option 1: Individual keys
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: LOG_LEVEL
+
+      # Option 2: All keys at once
+      envFrom:
+        - configMapRef:
+            name: api-config
+</code></pre>
+<h3>Using ConfigMaps as Files (Volume Mount)</h3>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+  volumes:
+    - name: config-volume
+      configMap:
+        name: api-config
+</code></pre>
+<div class="diagram-box">
+CONFIGMAP USAGE PATTERNS
+<p>┌──────────────────────────────────────┐
+│            CONTAINER                 │
+│                                      │
+│  Environment Variables:              │
+│    LOG_LEVEL=info      ◄── ConfigMap │
+│    MAX_CONNECTIONS=100 ◄── (env)     │
+│                                      │
+│  Files:                              │
+│    /app/config/app.yaml ◄── ConfigMap│
+│    /etc/nginx/nginx.conf◄── (volume) │
+└──────────────────────────────────────┘</p>
+</div>
+<h2>Secrets: Sensitive Configuration</h2>
+<p>Secrets store passwords, API keys, and certificates. They work like ConfigMaps but Kubernetes treats them with more care.</p>
+<h3>Creating Secrets</h3>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: api-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: &quot;postgresql://user:password@postgres:5432/mydb&quot;
+  JWT_SECRET: &quot;super-secret-key-change-in-production&quot;
+  STRIPE_API_KEY: &quot;sk_live_abc123def456&quot;
+</code></pre>
+<blockquote>
+<p>Use <code>stringData</code> (plain text, auto-encoded) instead of <code>data</code> (requires manual base64 encoding).</p>
+</blockquote>
+<h3>Using Secrets in Pods</h3>
+<pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: DATABASE_URL
+      envFrom:
+        - secretRef:
+            name: api-secrets
+</code></pre>
+<h2>Environment-Specific Configuration</h2>
+<p>The key pattern: <strong>same image, different config per environment</strong>.</p>
+<div class="diagram-box">
+SAME IMAGE, DIFFERENT CONFIG
+<p>Image: my-api:1.0.0 (identical everywhere)
+│
+┌──────┼──────┐
+▼      ▼      ▼
+DEV   STAGING  PROD
+───   ───────  ────
+LOG=  LOG=     LOG=
+debug info     warn
+DB=   DB=      DB=
+dev   staging  prod</p>
+</div>
+<h3>Using Kustomize for Overlays</h3>
+<pre><code>k8s/
+├── base/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── kustomization.yaml
+└── overlays/
+    ├── dev/
+    │   ├── configmap.yaml
+    │   └── kustomization.yaml
+    └── production/
+        ├── configmap.yaml
+        └── kustomization.yaml
+</code></pre>
+<p>Deploy to production:</p>
+<pre><code class="language-bash">kubectl apply -k k8s/overlays/production/
+</code></pre>
+<h2>Secrets Security Best Practices</h2>
+<h3>1. Never Commit Secrets to Git</h3>
+<p>Use one of these instead:</p>
+<ul>
+<li><strong>Sealed Secrets</strong> — encrypts secrets for safe Git storage</li>
+<li><strong>External Secrets Operator</strong> — syncs from Azure Key Vault, AWS Secrets Manager, or Vault</li>
+<li><strong>SOPS</strong> — encrypts specific YAML values</li>
+</ul>
+<h3>2. Use External Secrets Operator for Production</h3>
+<pre><code class="language-yaml">apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: api-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: azure-keyvault
+    kind: ClusterSecretStore
+  target:
+    name: api-secrets
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: production-database-url
+</code></pre>
+<h3>3. Enable Encryption at Rest</h3>
+<p>By default Kubernetes stores secrets base64-encoded (NOT encrypted) in etcd. Enable encryption in your cluster configuration.</p>
+<h2>The Restart Problem</h2>
+<p>When you update a ConfigMap, Pods using env vars do <strong>NOT</strong> auto-restart:</p>
+<pre><code class="language-bash"># Force a rolling restart after config change
+kubectl rollout restart deployment/my-api
+</code></pre>
+<p>Volume-mounted ConfigMaps update automatically (within ~60 seconds), but your app needs to watch the file for changes.</p>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Hardcoding config in the image</strong> — use ConfigMaps instead</li>
+<li><strong>Using ConfigMaps for secrets</strong> — ConfigMaps have no access controls</li>
+<li><strong>Not setting <code>readOnly: true</code></strong> on secret volume mounts</li>
+<li><strong>Giant ConfigMaps</strong> — one ConfigMap per concern</li>
+<li><strong>Forgetting to restart</strong> after ConfigMap env var changes</li>
+</ol>
+<h2>Key Takeaways</h2>
+<ol>
+<li><strong>ConfigMaps</strong> for non-sensitive config (log levels, feature flags)</li>
+<li><strong>Secrets</strong> for sensitive config (passwords, API keys, certificates)</li>
+<li><strong>Environment variables</strong> for simple key-value pairs</li>
+<li><strong>Volume mounts</strong> for configuration files</li>
+<li><strong>Kustomize</strong> for environment-specific overlays</li>
+<li><strong>External Secrets Operator</strong> for production secret management</li>
+<li><strong>Never commit secrets to Git</strong></li>
+</ol>
+<p>← <a href="/courses/kubernetes-for-app-devs/01-pods-deployments-services/">Lesson 1: Pods, Deployments, Services</a> | Lesson 3: Health Checks (coming soon) →</p>
+<p><em>Part of the Kubernetes for Application Developers course by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

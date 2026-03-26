@@ -1,0 +1,169 @@
+<h1>שיעור 3: Linked Lists — מבנה הנתונים הקלאסי</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Linked Lists הן אחת השאלות הקלאסיות ביותר בראיונות.<br>
+Reversal, cycle detection וmerge — אלה שאלות שכדאי לפתור תוך שניות.</p>
+<hr>
+<h2>Node ו-LinkedList</h2>
+<pre><code class="language-csharp">public class ListNode
+{
+    public int Val;
+    public ListNode? Next;
+    
+    public ListNode(int val = 0, ListNode? next = null)
+    {
+        Val = val;
+        Next = next;
+    }
+}
+</code></pre>
+<hr>
+<h2>Reverse Linked List — השאלה הקלאסית</h2>
+<pre><code class="language-csharp">// Iterative — O(n) time, O(1) space
+ListNode? ReverseList(ListNode? head)
+{
+    ListNode? prev = null;
+    ListNode? curr = head;
+    
+    while (curr != null)
+    {
+        ListNode? next = curr.Next; // שמירה
+        curr.Next = prev;           // היפוך
+        prev = curr;                // קדמה
+        curr = next;                // קדמה
+    }
+    return prev;
+}
+
+// Recursive — O(n) time, O(n) space
+ListNode? ReverseListRec(ListNode? head)
+{
+    if (head?.Next == null) return head;
+    
+    var newHead = ReverseListRec(head.Next);
+    head.Next.Next = head;
+    head.Next = null;
+    return newHead;
+}
+</code></pre>
+<hr>
+<h2>Fast &amp; Slow Pointers — Cycle Detection</h2>
+<pre><code class="language-csharp">// Floyd's Algorithm — מציאת מעגל
+bool HasCycle(ListNode? head)
+{
+    var slow = head;
+    var fast = head;
+    
+    while (fast?.Next != null)
+    {
+        slow = slow!.Next;
+        fast = fast.Next.Next;
+        
+        if (slow == fast) return true; // מצאנו מעגל
+    }
+    return false; // O(n), Space O(1)
+}
+
+// מציאת אמצע הרשימה
+ListNode? FindMiddle(ListNode? head)
+{
+    var slow = head;
+    var fast = head;
+    
+    while (fast?.Next != null)
+    {
+        slow = slow!.Next;
+        fast = fast.Next.Next;
+    }
+    return slow; // האמצע
+}
+</code></pre>
+<hr>
+<h2>Merge Two Sorted Lists</h2>
+<pre><code class="language-csharp">ListNode? MergeTwoLists(ListNode? l1, ListNode? l2)
+{
+    var dummy = new ListNode(0);
+    var curr = dummy;
+    
+    while (l1 != null &amp;&amp; l2 != null)
+    {
+        if (l1.Val &lt;= l2.Val)
+        {
+            curr.Next = l1;
+            l1 = l1.Next;
+        }
+        else
+        {
+            curr.Next = l2;
+            l2 = l2.Next;
+        }
+        curr = curr.Next;
+    }
+    
+    curr.Next = l1 ?? l2; // שאריות
+    return dummy.Next; // O(n+m)
+}
+</code></pre>
+<hr>
+<h2>Delete N-th Node from End</h2>
+<pre><code class="language-csharp">ListNode? RemoveNthFromEnd(ListNode? head, int n)
+{
+    var dummy = new ListNode(0, head);
+    var fast = dummy;
+    var slow = dummy;
+    
+    for (int i = 0; i &lt;= n; i++)
+        fast = fast.Next!;
+    
+    while (fast != null)
+    {
+        fast = fast.Next;
+        slow = slow.Next!;
+    }
+    
+    slow.Next = slow.Next?.Next;
+    return dummy.Next;
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה יתרון Linked List על Array?&quot;</h3>
+<p><strong>תשובה:</strong> Insertion/Deletion ב-O(1) כשיש pointer (אין shift). אבל Random Access הוא O(n).</p>
+<h3>שאלה 2: &quot;איך בודקים מעגל?&quot;</h3>
+<p><strong>תשובה:</strong> Floyd's Cycle Detection — Fast &amp; Slow pointers. אם נפגשים — יש מעגל.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>פעולה</th>
+<th>Singly Linked</th>
+<th>Array</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Access</td>
+<td>O(n)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>Insert Head</td>
+<td>O(1)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>Insert Tail</td>
+<td>O(n)</td>
+<td>O(1) amortized</td>
+</tr>
+<tr>
+<td>Delete</td>
+<td>O(n) search</td>
+<td>O(n) shift</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 3 מתוך 10</em></p>

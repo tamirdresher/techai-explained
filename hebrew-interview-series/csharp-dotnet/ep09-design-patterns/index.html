@@ -1,0 +1,244 @@
+<h1>שיעור 9: Design Patterns ב-C# — Singleton, Factory, Repository</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Design Patterns הם &quot;פתרונות מוכחים לבעיות חוזרות&quot;. כל מפתח בכיר מצפה שתכיר לפחות את הפטרנים הנפוצים.<br>
+בראיון, לא מספיק לדעת את ה-pattern — צריך להסביר <strong>מתי ולמה</strong> להשתמש בו, ואת המחסרונות שלו.</p>
+<hr>
+<h2>Singleton Pattern</h2>
+<p>מבטיח שמחלקה תיצור <strong>instance אחד בלבד</strong> לאורך חיי האפליקציה.</p>
+<h3>Singleton הבסיסי (Thread-Safe)</h3>
+<pre><code class="language-csharp">public class ConfigurationManager
+{
+    private static ConfigurationManager? _instance;
+    private static readonly object _lock = new object();
+    
+    private ConfigurationManager()
+    {
+        // Private constructor — מונע יצירה חיצונית
+        LoadConfiguration();
+    }
+    
+    public static ConfigurationManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                lock (_lock) // Double-check locking
+                {
+                    _instance ??= new ConfigurationManager();
+                }
+            }
+            return _instance;
+        }
+    }
+    
+    public string GetValue(string key) =&gt; /* ... */ &quot;&quot;;
+    
+    private void LoadConfiguration() { }
+}
+
+// שימוש
+var config = ConfigurationManager.Instance;
+var value = config.GetValue(&quot;ConnectionString&quot;);
+</code></pre>
+<h3>Singleton מודרני עם Lazy&lt;T&gt;</h3>
+<pre><code class="language-csharp">public class AppCache
+{
+    private static readonly Lazy&lt;AppCache&gt; _lazy =
+        new Lazy&lt;AppCache&gt;(() =&gt; new AppCache());
+    
+    public static AppCache Instance =&gt; _lazy.Value;
+    
+    private AppCache() { }
+}
+</code></pre>
+<h3>⚠️ בעיות של Singleton</h3>
+<ul>
+<li>קשה לבדיקה (unit tests)</li>
+<li>מסתיר dependencies</li>
+<li>בעיות ב-multi-threading אם לא מיושם נכון</li>
+</ul>
+<hr>
+<h2>Factory Pattern</h2>
+<p><strong>Factory</strong> מפריד בין יצירת אובייקטים לבין השימוש בהם.</p>
+<h3>Simple Factory</h3>
+<pre><code class="language-csharp">public abstract class Notification
+{
+    public abstract void Send(string message);
+}
+
+public class EmailNotification : Notification
+{
+    public override void Send(string message) =&gt;
+        Console.WriteLine($&quot;Email: {message}&quot;);
+}
+
+public class SmsNotification : Notification
+{
+    public override void Send(string message) =&gt;
+        Console.WriteLine($&quot;SMS: {message}&quot;);
+}
+
+public class NotificationFactory
+{
+    public static Notification Create(string type) =&gt; type switch
+    {
+        &quot;email&quot; =&gt; new EmailNotification(),
+        &quot;sms&quot; =&gt; new SmsNotification(),
+        _ =&gt; throw new ArgumentException($&quot;Unknown type: {type}&quot;)
+    };
+}
+
+// שימוש
+var notification = NotificationFactory.Create(&quot;email&quot;);
+notification.Send(&quot;Hello!&quot;); // Email: Hello!
+</code></pre>
+<h3>Abstract Factory</h3>
+<pre><code class="language-csharp">public interface IUiFactory
+{
+    IButton CreateButton();
+    ICheckbox CreateCheckbox();
+}
+
+public class WindowsUiFactory : IUiFactory
+{
+    public IButton CreateButton() =&gt; new WindowsButton();
+    public ICheckbox CreateCheckbox() =&gt; new WindowsCheckbox();
+}
+
+public class MacUiFactory : IUiFactory
+{
+    public IButton CreateButton() =&gt; new MacButton();
+    public ICheckbox CreateCheckbox() =&gt; new MacCheckbox();
+}
+</code></pre>
+<hr>
+<h2>Repository Pattern</h2>
+<p><strong>Repository</strong> מסתיר את פרטי גישת הנתונים מה-business logic.</p>
+<pre><code class="language-csharp">public interface IUserRepository
+{
+    Task&lt;User?&gt; GetByIdAsync(int id);
+    Task&lt;IEnumerable&lt;User&gt;&gt; GetAllAsync();
+    Task&lt;User&gt; AddAsync(User user);
+    Task UpdateAsync(User user);
+    Task DeleteAsync(int id);
+}
+
+public class UserRepository : IUserRepository
+{
+    private readonly AppDbContext _context;
+    
+    public UserRepository(AppDbContext context)
+    {
+        _context = context;
+    }
+    
+    public async Task&lt;User?&gt; GetByIdAsync(int id)
+        =&gt; await _context.Users.FindAsync(id);
+    
+    public async Task&lt;IEnumerable&lt;User&gt;&gt; GetAllAsync()
+        =&gt; await _context.Users.ToListAsync();
+    
+    public async Task&lt;User&gt; AddAsync(User user)
+    {
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        return user;
+    }
+    
+    public async Task UpdateAsync(User user)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
+    
+    public async Task DeleteAsync(int id)
+    {
+        var user = await GetByIdAsync(id);
+        if (user != null)
+        {
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+
+// Service משתמש ב-Interface, לא ב-implementation
+public class UserService
+{
+    private readonly IUserRepository _repository;
+    
+    public UserService(IUserRepository repository) // DI
+    {
+        _repository = repository;
+    }
+    
+    public async Task&lt;User?&gt; GetUserAsync(int id)
+        =&gt; await _repository.GetByIdAsync(id);
+}
+</code></pre>
+<hr>
+<h2>Observer Pattern</h2>
+<pre><code class="language-csharp">// .NET מספק IObserver&lt;T&gt; ו-IObservable&lt;T&gt;
+public class StockMarket : IObservable&lt;decimal&gt;
+{
+    private readonly List&lt;IObserver&lt;decimal&gt;&gt; _observers = new();
+    
+    public IDisposable Subscribe(IObserver&lt;decimal&gt; observer)
+    {
+        _observers.Add(observer);
+        return new Unsubscriber(_observers, observer);
+    }
+    
+    public void UpdatePrice(decimal price)
+    {
+        foreach (var observer in _observers)
+            observer.OnNext(price);
+    }
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה ה-pattern המתאים ל-DbContext?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> Repository Pattern (לגישת נתונים) יחד עם Unit of Work Pattern (לניהול transactions).</p>
+<h3>שאלה 2: &quot;מה החסרונות של Singleton?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> קשה ל-unit testing (צריך dependency injection במקום), מסתיר dependencies, בעיות thread safety אם לא מיושם נכון.</p>
+<h3>שאלה 3: &quot;מה ההבדל בין Factory Method לAbstract Factory?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> Factory Method יוצר product אחד. Abstract Factory יוצר <strong>משפחת products</strong> שעובדים יחד.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>בעיה שפותר</th>
+<th>מתי להשתמש</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Singleton</td>
+<td>Instance יחיד</td>
+<td>Config, Cache, Logger</td>
+</tr>
+<tr>
+<td>Factory</td>
+<td>הסתרת יצירת אובייקטים</td>
+<td>יצירה מותנית</td>
+</tr>
+<tr>
+<td>Repository</td>
+<td>הפרדת data access</td>
+<td>ניגשים ל-DB</td>
+</tr>
+<tr>
+<td>Observer</td>
+<td>event broadcasting</td>
+<td>real-time notifications</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 9 מתוך 10</em></p>

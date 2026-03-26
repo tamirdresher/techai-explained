@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenTelemetry from Zero to Production — TechAI Explained</title>
+  <meta name="description" content="A hands-on guide to instrumenting your applications with OpenTelemetry — auto-instrumentation, custom spans and metrics, collector pipelines, and deploying a full observability stack with Grafana, Prometheus, and Jaeger.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">DevOps</span>
+      <time>March 8, 2026</time>
+      <span class="read-time">14 min read</span>
+    </div>
+    <h1>OpenTelemetry from Zero to Production</h1>
+    <p class="subtitle">A hands-on guide to instrumenting your applications with OpenTelemetry — auto-instrumentation, custom spans and metrics, collector pipelines, and deploying a full observability stack with Grafana, Prometheus, and Jaeger.</p>
+  </header>
+  <div class="article-body">
+    <p>OpenTelemetry (OTel) is the universal standard for observability. It gives you traces, metrics, and logs — vendor-neutral, language-agnostic, and supported by every major observability platform. But going from &quot;install the SDK&quot; to &quot;debug a production incident in 30 seconds&quot; requires understanding the full pipeline.</p>
+<p>This guide takes you from zero instrumentation to a production-ready observability stack.</p>
+<h2>The OpenTelemetry Architecture</h2>
+<div class="diagram-box">
+YOUR APPLICATION                    BACKEND
+──────────────                      ───────
+<p>┌─────────────────┐    ┌──────────────┐    ┌─────────────┐
+│  OTel SDK       │    │  OTel        │    │  Jaeger     │
+│                 │───►│  Collector   │───►│  (Traces)   │
+│  Auto-instrument│    │              │    ├─────────────┤
+│  Custom spans   │    │  Receives    │    │ Prometheus  │
+│  Custom metrics │    │  Processes   │───►│  (Metrics)  │
+│                 │    │  Exports     │    ├─────────────┤
+└─────────────────┘    └──────────────┘    │  Loki       │
+───►│  (Logs)     │
+└──────┬──────┘
+│
+┌──────┴──────┐
+│  Grafana    │
+│ (Dashboards)│
+└─────────────┘</p>
+</div>
+<p>Three components:</p>
+<ol>
+<li><strong>SDK</strong> — instruments your code and collects telemetry</li>
+<li><strong>Collector</strong> — receives, processes, and exports telemetry data</li>
+<li><strong>Backends</strong> — store and visualize the data (Jaeger, Prometheus, Grafana)</li>
+</ol>
+<h2>Step 1: Auto-Instrumentation (Node.js)</h2>
+<p>Auto-instrumentation captures traces from HTTP frameworks, database clients, and other libraries without changing your code.</p>
+<pre><code class="language-bash">npm install @opentelemetry/sdk-node \
+  @opentelemetry/auto-instrumentations-node \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/exporter-metrics-otlp-http
+</code></pre>
+<p>Create the instrumentation file — loaded before your app:</p>
+<pre><code class="language-typescript">// instrumentation.ts
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { Resource } from '@opentelemetry/resources';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
+
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [ATTR_SERVICE_NAME]: 'order-api',
+    [ATTR_SERVICE_VERSION]: '1.2.0',
+    'deployment.environment': process.env.NODE_ENV || 'development',
+  }),
+  traceExporter: new OTLPTraceExporter({
+    url: 'http://otel-collector:4318/v1/traces',
+  }),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter({
+      url: 'http://otel-collector:4318/v1/metrics',
+    }),
+    exportIntervalMillis: 15000,
+  }),
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-http': { enabled: true },
+      '@opentelemetry/instrumentation-express': { enabled: true },
+      '@opentelemetry/instrumentation-pg': { enabled: true },
+      '@opentelemetry/instrumentation-redis': { enabled: true },
+    }),
+  ],
+});
+
+sdk.start();
+
+process.on('SIGTERM', () =&gt; {
+  sdk.shutdown().then(() =&gt; process.exit(0));
+});
+</code></pre>
+<p>Start your app with instrumentation:</p>
+<pre><code class="language-bash">node --require ./instrumentation.js dist/index.js
+</code></pre>
+<p>That's it. Every HTTP request, database query, and Redis call is now traced automatically.</p>
+<h2>Step 2: Auto-Instrumentation (.NET)</h2>
+<pre><code class="language-bash">dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package OpenTelemetry.Instrumentation.AspNetCore
+dotnet add package OpenTelemetry.Instrumentation.Http
+dotnet add package OpenTelemetry.Instrumentation.SqlClient
+dotnet add package OpenTelemetry.Exporter.OpenTelemetryProtocol
+</code></pre>
+<pre><code class="language-csharp">// Program.cs
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r =&gt; r
+        .AddService(&quot;order-api&quot;, serviceVersion: &quot;1.2.0&quot;)
+        .AddAttributes(new Dictionary&lt;string, object&gt;
+        {
+            [&quot;deployment.environment&quot;] = builder.Environment.EnvironmentName,
+        }))
+    .WithTracing(tracing =&gt; tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddSqlClientInstrumentation(o =&gt; o.SetDbStatementForText = true)
+        .AddOtlpExporter(o =&gt;
+        {
+            o.Endpoint = new Uri(&quot;http://otel-collector:4317&quot;);
+        }))
+    .WithMetrics(metrics =&gt; metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddOtlpExporter(o =&gt;
+        {
+            o.Endpoint = new Uri(&quot;http://otel-collector:4317&quot;);
+        }));
+</code></pre>
+<h2>Step 3: Custom Spans and Metrics</h2>
+<p>Auto-instrumentation captures infrastructure-level telemetry. Custom instrumentation captures your business logic.</p>
+<h3>Custom Spans (Traces)</h3>
+<pre><code class="language-typescript">import { trace, SpanStatusCode } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('order-service');
+
+async function processOrder(order: Order): Promise&lt;ProcessedOrder&gt; {
+  return tracer.startActiveSpan('process-order', async (span) =&gt; {
+    span.setAttribute('order.id', order.id);
+    span.setAttribute('order.item_count', order.items.length);
+    span.setAttribute('order.total', order.total);
+
+    try {
+      // Child span for inventory check
+      const inventory = await tracer.startActiveSpan(
+        'check-inventory',
+        async (childSpan) =&gt; {
+          childSpan.setAttribute('inventory.warehouse', 'us-east-1');
+          const result = await inventoryService.check(order.items);
+          childSpan.setAttribute('inventory.available', result.allAvailable);
+          childSpan.end();
+          return result;
+        }
+      );
+
+      // Child span for payment
+      const payment = await tracer.startActiveSpan(
+        'process-payment',
+        async (childSpan) =&gt; {
+          childSpan.setAttribute('payment.method', order.paymentMethod);
+          const result = await paymentService.charge(order.total);
+          childSpan.setAttribute('payment.transaction_id', result.txId);
+          childSpan.end();
+          return result;
+        }
+      );
+
+      span.setStatus({ code: SpanStatusCode.OK });
+      return { orderId: order.id, status: 'completed' };
+    } catch (error) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      span.recordException(error);
+      throw error;
+    } finally {
+      span.end();
+    }
+  });
+}
+</code></pre>
+<h3>Custom Metrics</h3>
+<pre><code class="language-typescript">import { metrics } from '@opentelemetry/api';
+
+const meter = metrics.getMeter('order-service');
+
+// Counter — tracks totals
+const ordersProcessed = meter.createCounter('orders.processed', {
+  description: 'Total orders processed',
+  unit: 'orders',
+});
+
+// Histogram — tracks distributions
+const orderDuration = meter.createHistogram('orders.duration', {
+  description: 'Order processing duration',
+  unit: 'ms',
+});
+
+// Up-down counter — tracks current values
+const activeOrders = meter.createUpDownCounter('orders.active', {
+  description: 'Currently processing orders',
+});
+
+// Usage
+async function processOrder(order: Order) {
+  activeOrders.add(1);
+  const startTime = Date.now();
+
+  try {
+    const result = await doProcessing(order);
+    ordersProcessed.add(1, {
+      'order.status': 'success',
+      'order.type': order.type,
+    });
+    return result;
+  } catch (err) {
+    ordersProcessed.add(1, { 'order.status': 'failure' });
+    throw err;
+  } finally {
+    orderDuration.record(Date.now() - startTime);
+    activeOrders.add(-1);
+  }
+}
+</code></pre>
+<h2>Step 4: The Collector</h2>
+<p>The OTel Collector is a proxy that receives telemetry, processes it, and exports to backends.</p>
+<pre><code class="language-yaml"># otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  attributes:
+    actions:
+      - key: environment
+        value: production
+        action: upsert
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [otlp/jaeger]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [loki]
+</code></pre>
+<div class="diagram-box">
+COLLECTOR PIPELINE
+<p>Receivers ──► Processors ──► Exporters</p>
+<p>OTLP/gRPC ─┐   ┌─ batch ─────┐   ┌─► Jaeger (traces)
+├──►│  memory     ├──►├─► Prometheus (metrics)
+OTLP/HTTP ─┘   │  attributes │   └─► Loki (logs)
+└─────────────┘</p>
+</div>
+<h2>Step 5: Deploy the Full Stack</h2>
+<pre><code class="language-yaml"># docker-compose.yml
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: --config=/etc/otel-collector-config.yaml
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - &quot;4317:4317&quot;   # OTLP gRPC
+      - &quot;4318:4318&quot;   # OTLP HTTP
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - &quot;16686:16686&quot; # Jaeger UI
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - &quot;9090:9090&quot;
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - &quot;3100:3100&quot;
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - &quot;3000:3000&quot;
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+</code></pre>
+<h2>Production Checklist</h2>
+<ul>
+<li>[ ] <strong>Sampling</strong> — don't trace 100% of requests in production; use tail sampling or probability sampling</li>
+<li>[ ] <strong>Resource attributes</strong> — set service name, version, and environment on every signal</li>
+<li>[ ] <strong>Collector as a sidecar or DaemonSet</strong> — don't send directly to backends from your app</li>
+<li>[ ] <strong>Memory limits</strong> — configure <code>memory_limiter</code> processor to prevent OOM</li>
+<li>[ ] <strong>Alerting rules</strong> — create Prometheus alerts for error rate spikes and latency thresholds</li>
+<li>[ ] <strong>Dashboard templates</strong> — use Grafana's RED (Rate, Error, Duration) dashboard per service</li>
+</ul>
+<h2>Debugging with Traces</h2>
+<p>When a request fails, the trace shows exactly what happened:</p>
+<div class="diagram-box">
+TRACE: POST /api/orders (500 Internal Server Error)
+<p>order-api ────────────────────────────────────── 342ms (ERROR)
+│
+├─ check-inventory ────────────────── 45ms ✅
+│    └─ pg.query SELECT ... ───── 12ms ✅
+│
+├─ process-payment ────────────────── 287ms ❌
+│    └─ http POST stripe.com ──── 285ms ❌
+│         Status: 402 Payment Required
+│         Error: Card declined
+│
+└─ (create-shipment — never reached)</p>
+<p>ROOT CAUSE: Payment failed due to declined card.
+Time to diagnose: 15 seconds (not 15 minutes).</p>
+</div>
+<p>That's the power of distributed tracing. Every request tells a story. OpenTelemetry makes sure you can read it.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

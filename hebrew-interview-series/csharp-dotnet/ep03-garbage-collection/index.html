@@ -1,0 +1,233 @@
+<h1>שיעור 3: Garbage Collection ו-IDisposable — ניהול זיכרון ב-C#</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>&quot;C# מנהלת זיכרון אוטומטית&quot; — אמת, אבל לא כל האמת.<br>
+מפתחים שמבינים את ה-Garbage Collector ויודעים מתי להשתמש ב-<code>IDisposable</code> הם מפתחים שכותבים קוד עם <strong>ביצועים טובים יותר</strong> ולא מזליגים משאבים.<br>
+בשיעור הזה נפרק את הנושא לעומק.</p>
+<hr>
+<h2>מה הוא Garbage Collector?</h2>
+<p>ה-<strong>Garbage Collector (GC)</strong> הוא מנגנון ב-.NET שמנהל <strong>זיכרון ה-Heap</strong> באופן אוטומטי.<br>
+הוא אחראי לשחרר אובייקטים שאין יותר reference אליהם.</p>
+<pre><code class="language-csharp">void SomeMethod()
+{
+    var obj = new MyClass(); // אובייקט נוצר ב-Heap
+    obj.DoWork();
+    // obj יוצא מה-scope — GC ישחרר את הזיכרון בזמן כלשהו
+}
+</code></pre>
+<hr>
+<h2>הדורות של ה-GC (Generations)</h2>
+<p>ה-GC מחלק אובייקטים ל-3 <strong>דורות (Generations)</strong>:</p>
+<h3>Generation 0 — צעירים</h3>
+<ul>
+<li>אובייקטים שנוצרו לאחרונה</li>
+<li>נאספים הכי תכופות</li>
+<li>רוב האובייקטים &quot;מתים&quot; כאן</li>
+</ul>
+<h3>Generation 1 — ביניים</h3>
+<ul>
+<li>אובייקטים ששרדו Collection אחת</li>
+<li>מעבר בין Gen0 לGen2</li>
+</ul>
+<h3>Generation 2 — ותיקים</h3>
+<ul>
+<li>אובייקטים שחיים הרבה זמן</li>
+<li>נאספים לעתים רחוקות</li>
+<li>Long-lived objects: cache, singletons</li>
+</ul>
+<pre><code>Gen 0: [🆕 🆕 🆕 🆕 🆕] ← Collection תכופה
+Gen 1: [📦 📦]
+Gen 2: [🏛️ 🏛️] ← Collection נדירה
+</code></pre>
+<hr>
+<h2>Large Object Heap (LOH)</h2>
+<p>אובייקטים <strong>מעל 85,000 בייטים</strong> מוקצים ישירות ל-<strong>Large Object Heap</strong>:</p>
+<ul>
+<li>לא עוברים Compaction (מסיבות ביצועים)</li>
+<li>גורמים ל-<strong>Heap Fragmentation</strong></li>
+<li>נאספים רק עם Gen2 Collection</li>
+</ul>
+<pre><code class="language-csharp">// ⚠️ יוקצה ב-LOH
+var largeArray = new byte[100_000];
+
+// ✅ טוב יותר — שימוש ב-ArrayPool
+var buffer = ArrayPool&lt;byte&gt;.Shared.Rent(100_000);
+try { /* ... */ }
+finally { ArrayPool&lt;byte&gt;.Shared.Return(buffer); }
+</code></pre>
+<hr>
+<h2>IDisposable — לניהול משאבים לא-מנוהלים</h2>
+<p>ה-GC מנהל <strong>זיכרון</strong> בלבד. הוא <strong>לא</strong> מנהל:</p>
+<ul>
+<li>חיבורי DB</li>
+<li>File handles</li>
+<li>Network connections</li>
+<li>COM objects</li>
+</ul>
+<p>לכן יש את הממשק <code>IDisposable</code>:</p>
+<pre><code class="language-csharp">public class DatabaseConnection : IDisposable
+{
+    private SqlConnection _connection;
+    private bool _disposed = false;
+    
+    public DatabaseConnection(string connectionString)
+    {
+        _connection = new SqlConnection(connectionString);
+        _connection.Open();
+    }
+    
+    public void ExecuteQuery(string sql)
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(DatabaseConnection));
+        // ...
+    }
+    
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this); // מונע קריאה כפולה ל-Finalizer
+    }
+    
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connection?.Dispose(); // שחרור managed resources
+            }
+            _disposed = true;
+        }
+    }
+}
+
+// שימוש עם using — Dispose נקרא אוטומטית
+using var db = new DatabaseConnection(&quot;...&quot;);
+db.ExecuteQuery(&quot;SELECT 1&quot;);
+// כאן Dispose נקרא אוטומטית
+</code></pre>
+<hr>
+<h2>Finalizer — ה-Safety Net</h2>
+<p><code>Finalizer</code> (ידוע גם כ-Destructor) הוא מנגנון גיבוי:</p>
+<pre><code class="language-csharp">public class ResourceHolder : IDisposable
+{
+    private IntPtr _nativeHandle;
+    
+    public ResourceHolder()
+    {
+        _nativeHandle = NativeLibrary.Allocate();
+    }
+    
+    ~ResourceHolder() // Finalizer
+    {
+        // נקרא ע&quot;י GC אם Dispose לא נקרא
+        Dispose(false);
+    }
+    
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this); // ביטול Finalizer — כבר שחררנו
+    }
+    
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_nativeHandle != IntPtr.Zero)
+        {
+            NativeLibrary.Free(_nativeHandle);
+            _nativeHandle = IntPtr.Zero;
+        }
+    }
+}
+</code></pre>
+<p><strong>⚠️ זכרו:</strong> Finalizers מאטים את ה-GC. תמיד קוראים ל-<code>Dispose()</code> ידנית.</p>
+<hr>
+<h2>using Statement ו-using Declaration</h2>
+<pre><code class="language-csharp">// using statement (C# 1+)
+using (var reader = new StreamReader(&quot;file.txt&quot;))
+{
+    string content = reader.ReadToEnd();
+}
+// reader.Dispose() נקרא כאן
+
+// using declaration (C# 8+) — קוד נקי יותר
+using var reader = new StreamReader(&quot;file.txt&quot;);
+string content = reader.ReadToEnd();
+// reader.Dispose() נקרא בסוף ה-scope
+</code></pre>
+<hr>
+<h2>IAsyncDisposable — async cleanup</h2>
+<pre><code class="language-csharp">public class AsyncResource : IAsyncDisposable
+{
+    private HttpClient _client = new HttpClient();
+    
+    public async ValueTask DisposeAsync()
+    {
+        await FlushAsync(); // עבודה אסינכרונית בעת סגירה
+        _client.Dispose();
+    }
+    
+    private async Task FlushAsync() { /* ... */ }
+}
+
+// שימוש
+await using var resource = new AsyncResource();
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה ההבדל בין Dispose ל-Finalize?&quot;</h3>
+<p><strong>תשובה נכונה:</strong></p>
+<ul>
+<li><code>Dispose</code> — נקרא <strong>ידנית</strong> (או ע&quot;י <code>using</code>), שחרור מיידי ומנוהל</li>
+<li><code>Finalize</code> — נקרא ע&quot;י <strong>ה-GC</strong> כ-safety net, איטי יותר, לא דטרמיניסטי</li>
+</ul>
+<h3>שאלה 2: &quot;מתי להשתמש ב-GC.Collect()?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> כמעט אף פעם. ה-GC יודע מה הוא עושה. קריאה ידנית ל-<code>GC.Collect()</code> בדרך כלל פוגעת בביצועים. מקרה חריג: לאחר ביצוע פעולה גדולה שיצרה הרבה garbage.</p>
+<h3>שאלה 3: &quot;מה הם Memory Leaks ב-C#?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> ב-C# memory leak קורה כשמחזיקים references לאובייקטים שלא צריך יותר:</p>
+<ul>
+<li>Event handlers שלא בוטלו (<code>+=</code> ללא <code>-=</code>)</li>
+<li>Static collections שגדלות ללא גבול</li>
+<li>Unmanaged resources ללא <code>Dispose</code></li>
+</ul>
+<hr>
+<h2>מלכודות נפוצות בראיון</h2>
+<p>❌ &quot;C# לא יכולה לסבול memory leaks&quot; — יכולה, בגלל references שנשמרים<br>
+❌ &quot;Dispose נקרא אוטומטית על ידי ה-GC&quot; — רק Finalizer נקרא, לא Dispose<br>
+❌ &quot;GC.Collect() יעיל לביצועים&quot; — בדרך כלל להיפך</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>מונח</th>
+<th>תפקיד</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GC</td>
+<td>שחרור זיכרון Heap אוטומטי</td>
+</tr>
+<tr>
+<td>Generation 0/1/2</td>
+<td>מנגנון אופטימיזציה של GC</td>
+</tr>
+<tr>
+<td>IDisposable</td>
+<td>שחרור משאבים לא-מנוהלים</td>
+</tr>
+<tr>
+<td>using</td>
+<td>הבטחת קריאה ל-Dispose</td>
+</tr>
+<tr>
+<td>Finalizer</td>
+<td>safety net לשחרור unmanaged</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 3 מתוך 10</em></p>

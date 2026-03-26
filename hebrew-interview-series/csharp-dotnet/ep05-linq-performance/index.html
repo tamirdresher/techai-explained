@@ -1,0 +1,164 @@
+<h1>שיעור 5: LINQ — פנים מאחורי הקלעים וביצועים</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>LINQ הוא אחד הדברים הכי אהובים על מפתחי C# — וגם אחד המקומות שבהם הכי קל לכתוב קוד לא יעיל.<br>
+בראיון, מועמד שמבין <strong>Deferred Execution</strong>, <strong>IEnumerable vs IQueryable</strong> ומתי LINQ עלול לפגוע בביצועים — מרשים.</p>
+<hr>
+<h2>LINQ — מה זה בעצם?</h2>
+<p><strong>LINQ (Language Integrated Query)</strong> מאפשר כתיבת שאילתות על collections, DB, XML ועוד בתחביר אחיד.</p>
+<pre><code class="language-csharp">var numbers = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+// Query syntax
+var evens = from n in numbers
+            where n % 2 == 0
+            select n;
+
+// Method syntax (יותר נפוץ)
+var evens2 = numbers.Where(n =&gt; n % 2 == 0);
+</code></pre>
+<hr>
+<h2>Deferred Execution — הנושא הכי חשוב!</h2>
+<pre><code class="language-csharp">var numbers = new List&lt;int&gt; { 1, 2, 3 };
+
+// ❗ הביטוי הזה לא מבצע כלום עדיין!
+var query = numbers.Where(n =&gt; n &gt; 1);
+
+numbers.Add(4); // מוסיף לפני הריצה
+
+// רק כאן מתבצעת הרצה — כולל ה-4 שנוסף!
+foreach (var n in query)
+    Console.WriteLine(n); // 2, 3, 4
+</code></pre>
+<p><strong>Deferred Execution</strong> = הביטוי מוגדר, אבל מבוצע רק כשמשתמשים בתוצאות.</p>
+<h3>מתי מתבצעת הרצה מיידית?</h3>
+<pre><code class="language-csharp">// Terminal operators — מריצים מיד
+var list = query.ToList();     // מיידי
+var array = query.ToArray();   // מיידי
+var count = query.Count();     // מיידי
+var first = query.First();     // מיידי
+var any = query.Any();         // מיידי
+</code></pre>
+<hr>
+<h2>Multiple Enumeration — הבאג הנסתר</h2>
+<pre><code class="language-csharp">// ❌ IEnumerable — עלול להריץ פעמיים!
+IEnumerable&lt;User&gt; users = GetUsersFromDatabase(); // שאילתת DB
+
+if (users.Any())                   // הרצה ראשונה: SELECT COUNT(*)
+    ProcessUsers(users);           // הרצה שנייה: SELECT *
+
+// ✅ Materialize פעם אחת
+var userList = GetUsersFromDatabase().ToList();
+if (userList.Any())
+    ProcessUsers(userList);
+</code></pre>
+<hr>
+<h2>IEnumerable vs IQueryable</h2>
+<p>זהו אחד ההבדלים הכי נשאלים בראיון!</p>
+<pre><code class="language-csharp">// IEnumerable — מביא הכל ל-memory, מסנן ב-C#
+IEnumerable&lt;User&gt; users = _context.Users
+    .Where(u =&gt; u.Age &gt; 18)  // SQL WHERE
+    .ToList()                 // מביא כל הUserים!
+    .Where(u =&gt; u.IsActive);  // מסנן בזיכרון
+
+// IQueryable — מתרגם הכל ל-SQL, מסנן ב-DB
+IQueryable&lt;User&gt; users = _context.Users
+    .Where(u =&gt; u.Age &gt; 18)   // יתורגם ל-SQL
+    .Where(u =&gt; u.IsActive);  // גם זה ב-SQL!
+// SQL: SELECT * FROM Users WHERE Age &gt; 18 AND IsActive = 1
+</code></pre>
+<h3>הכלל הפשוט:</h3>
+<ul>
+<li><strong>IQueryable</strong> = שאילתה שמתבצעת ב-DB</li>
+<li><strong>IEnumerable</strong> = אוסף שכבר ב-memory</li>
+</ul>
+<hr>
+<h2>Select vs SelectMany</h2>
+<pre><code class="language-csharp">var orders = new[] {
+    new Order { Items = new[] { &quot;Item1&quot;, &quot;Item2&quot; } },
+    new Order { Items = new[] { &quot;Item3&quot; } }
+};
+
+// Select — מחזיר IEnumerable&lt;IEnumerable&lt;string&gt;&gt;
+var nested = orders.Select(o =&gt; o.Items);
+// [[Item1, Item2], [Item3]]
+
+// SelectMany — מיישר (flatten)
+var flat = orders.SelectMany(o =&gt; o.Items);
+// [Item1, Item2, Item3]
+</code></pre>
+<hr>
+<h2>GroupBy — קיבוץ נתונים</h2>
+<pre><code class="language-csharp">var employees = GetEmployees();
+
+var byDepartment = employees
+    .GroupBy(e =&gt; e.Department)
+    .Select(g =&gt; new
+    {
+        Department = g.Key,
+        Count = g.Count(),
+        AvgSalary = g.Average(e =&gt; e.Salary)
+    });
+</code></pre>
+<hr>
+<h2>שיפורי ביצועים ב-LINQ</h2>
+<pre><code class="language-csharp">// ❌ FirstOrDefault לאחר Where
+var user = users.Where(u =&gt; u.Id == id).FirstOrDefault();
+
+// ✅ גרסה יעילה יותר
+var user = users.FirstOrDefault(u =&gt; u.Id == id);
+
+// ❌ Count() לבדיקת קיום
+if (users.Count() &gt; 0) { }
+
+// ✅ Any() מהיר יותר — עוצר ברגע שמוצא
+if (users.Any()) { }
+
+// ❌ OrderBy + First (ממיין הכל)
+var max = users.OrderByDescending(u =&gt; u.Score).First();
+
+// ✅ MaxBy — ישיר יותר (.NET 6+)
+var max = users.MaxBy(u =&gt; u.Score);
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה הוא Deferred Execution?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> LINQ query לא מתבצע בהגדרה, אלא רק כשעוברים על התוצאות (enumeration). הביצוע מתעכב עד לשימוש בפועל.</p>
+<h3>שאלה 2: &quot;מה ההבדל בין IEnumerable ל-IQueryable?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> IEnumerable מסנן בזיכרון, IQueryable מתרגם ל-SQL ומסנן ב-DB. IQueryable מגדיל ביצועים כי מוריד פחות נתונים.</p>
+<h3>שאלה 3: &quot;מה הוא N+1 בהקשר של LINQ/EF?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> שאילתה שמביאה N אובייקטים ואז מבצעת עוד N שאילתות לproperties קשורות. פותר אותו עם Eager Loading (<code>Include</code>).</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>עיקרון</th>
+<th>הסבר</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deferred Execution</td>
+<td>קוד LINQ רץ רק כשקוראים לו</td>
+</tr>
+<tr>
+<td>IEnumerable</td>
+<td>מסנן ב-C# memory</td>
+</tr>
+<tr>
+<td>IQueryable</td>
+<td>מסנן ב-DB (SQL)</td>
+</tr>
+<tr>
+<td>ToList/ToArray</td>
+<td>מאחסן בזיכרון, מסיים deferred</td>
+</tr>
+<tr>
+<td>Any() vs Count()</td>
+<td>Any מהיר יותר לבדיקת קיום</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 5 מתוך 10</em></p>

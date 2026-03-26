@@ -1,0 +1,190 @@
+<h1>שיעור 8: Graphs — BFS, DFS ו-Dijkstra</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול Algorithms &amp; LeetCode | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>Graphs הם מבנה הנתונים הכי כללי — עצים, מפות, רשתות חברתיות — כולם graphs.<br>
+BFS למרחק, DFS למסלולים, Dijkstra לנתיב קצר — שלושת האלגוריתמים שחייבים לדעת.</p>
+<hr>
+<h2>ייצוג Graph</h2>
+<pre><code class="language-csharp">// Adjacency List — נפוץ בשאלות
+var graph = new Dictionary&lt;int, List&lt;int&gt;&gt;
+{
+    { 0, new List&lt;int&gt; { 1, 2 } },
+    { 1, new List&lt;int&gt; { 0, 3 } },
+    { 2, new List&lt;int&gt; { 0, 4 } },
+    { 3, new List&lt;int&gt; { 1 } },
+    { 4, new List&lt;int&gt; { 2 } }
+};
+</code></pre>
+<hr>
+<h2>BFS על Graph — Shortest Path</h2>
+<pre><code class="language-csharp">int ShortestPath(int[][] graph, int src, int dst)
+{
+    var visited = new HashSet&lt;int&gt;();
+    var queue = new Queue&lt;(int node, int dist)&gt;();
+    queue.Enqueue((src, 0));
+    visited.Add(src);
+    
+    while (queue.Count &gt; 0)
+    {
+        var (node, dist) = queue.Dequeue();
+        if (node == dst) return dist;
+        
+        foreach (int neighbor in graph[node])
+        {
+            if (!visited.Contains(neighbor))
+            {
+                visited.Add(neighbor);
+                queue.Enqueue((neighbor, dist + 1));
+            }
+        }
+    }
+    return -1; // לא נמצא
+}
+</code></pre>
+<hr>
+<h2>DFS — Cycle Detection ו-Connected Components</h2>
+<pre><code class="language-csharp">// מציאת כל Connected Components
+int CountComponents(int n, int[][] edges)
+{
+    var adj = new List&lt;int&gt;[n];
+    for (int i = 0; i &lt; n; i++) adj[i] = new List&lt;int&gt;();
+    
+    foreach (var edge in edges)
+    {
+        adj[edge[0]].Add(edge[1]);
+        adj[edge[1]].Add(edge[0]);
+    }
+    
+    var visited = new bool[n];
+    int count = 0;
+    
+    for (int i = 0; i &lt; n; i++)
+    {
+        if (!visited[i])
+        {
+            DFS(adj, visited, i);
+            count++;
+        }
+    }
+    return count;
+}
+
+void DFS(List&lt;int&gt;[] adj, bool[] visited, int node)
+{
+    visited[node] = true;
+    foreach (int neighbor in adj[node])
+        if (!visited[neighbor])
+            DFS(adj, visited, neighbor);
+}
+</code></pre>
+<hr>
+<h2>Topological Sort — Directed Acyclic Graph</h2>
+<pre><code class="language-csharp">IList&lt;int&gt; TopologicalSort(int n, int[][] prerequisites)
+{
+    var inDegree = new int[n];
+    var adj = new List&lt;int&gt;[n];
+    for (int i = 0; i &lt; n; i++) adj[i] = new List&lt;int&gt;();
+    
+    foreach (var pre in prerequisites)
+    {
+        adj[pre[1]].Add(pre[0]);
+        inDegree[pre[0]]++;
+    }
+    
+    var queue = new Queue&lt;int&gt;();
+    for (int i = 0; i &lt; n; i++)
+        if (inDegree[i] == 0) queue.Enqueue(i);
+    
+    var order = new List&lt;int&gt;();
+    while (queue.Count &gt; 0)
+    {
+        int node = queue.Dequeue();
+        order.Add(node);
+        
+        foreach (int next in adj[node])
+            if (--inDegree[next] == 0)
+                queue.Enqueue(next);
+    }
+    return order.Count == n ? order : new List&lt;int&gt;();
+}
+</code></pre>
+<hr>
+<h2>Dijkstra — Shortest Weighted Path</h2>
+<pre><code class="language-csharp">int[] Dijkstra(int[][] graph, int src)
+{
+    int n = graph.Length;
+    var dist = new int[n];
+    Array.Fill(dist, int.MaxValue);
+    dist[src] = 0;
+    
+    // (distance, node)
+    var pq = new PriorityQueue&lt;(int dist, int node), int&gt;();
+    pq.Enqueue((0, src), 0);
+    
+    while (pq.Count &gt; 0)
+    {
+        var (d, u) = pq.Dequeue();
+        if (d &gt; dist[u]) continue; // outdated
+        
+        for (int v = 0; v &lt; n; v++)
+        {
+            if (graph[u][v] &gt; 0)
+            {
+                int newDist = dist[u] + graph[u][v];
+                if (newDist &lt; dist[v])
+                {
+                    dist[v] = newDist;
+                    pq.Enqueue((newDist, v), newDist);
+                }
+            }
+        }
+    }
+    return dist; // O((V+E) log V)
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;BFS vs DFS — מתי כל אחד?&quot;</h3>
+<p><strong>תשובה:</strong></p>
+<ul>
+<li><strong>BFS:</strong> Shortest path, level traversal, מצא &quot;קרוב ביותר&quot;</li>
+<li><strong>DFS:</strong> Cycle detection, Connected components, Topological sort</li>
+</ul>
+<h3>שאלה 2: &quot;מתי Dijkstra לא עובד?&quot;</h3>
+<p><strong>תשובה:</strong> כשיש <strong>משקלים שליליים</strong>. במקרה זה — Bellman-Ford.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>אלגוריתם</th>
+<th>שימוש</th>
+<th>סיבוכיות</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BFS</td>
+<td>Shortest path (unweighted)</td>
+<td>O(V+E)</td>
+</tr>
+<tr>
+<td>DFS</td>
+<td>Connectivity, cycles</td>
+<td>O(V+E)</td>
+</tr>
+<tr>
+<td>Dijkstra</td>
+<td>Shortest path (weighted)</td>
+<td>O((V+E)log V)</td>
+</tr>
+<tr>
+<td>Topo Sort</td>
+<td>Task scheduling, dependencies</td>
+<td>O(V+E)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול Algorithms | שיעור 8 מתוך 10</em></p>

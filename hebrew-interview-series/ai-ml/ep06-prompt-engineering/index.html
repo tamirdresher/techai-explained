@@ -1,0 +1,209 @@
+<h1>Prompt Engineering — דפוסים ו-Chain of Thought</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>עקרונות Prompt Engineering: כיצד לתקשר עם LLMs בצורה יעילה</li>
+<li>טכניקות מתקדמות: Few-shot, Chain-of-Thought, ReAct</li>
+<li>בניית prompts עמידים לproduction</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה זה Prompt Engineering ולמה זה מיומנות חשובה?</h3>
+<p><strong>תשובה:</strong>
+Prompt Engineering הוא אמנות וגם מדע של עיצוב הקלט (prompt) לLLM כדי לקבל פלט רצוי, עקבי ומדויק. למרות שנשמע פשוט, prompt design משפיע דרמטית על איכות התוצאות.</p>
+<p><strong>למה זה חשוב:</strong></p>
+<ul>
+<li>שינוי קטן בניסוח יכול לשנות לחלוטין את הפלט</li>
+<li>prompts טובים מפחיתים hallucinations ומשפרים דיוק</li>
+<li>בpractice — prompt engineering הוא לרוב מהיר ויעיל יותר מfine-tuning</li>
+<li>מיומנות נדרשת לכל תפקיד שעובד עם LLMs</li>
+</ul>
+<p><strong>עקרונות בסיסיים:</strong></p>
+<ol>
+<li><strong>Clarity (בהירות):</strong> היה ספציפי — &quot;כתוב סיכום של 3 משפטים&quot; &gt; &quot;תסכם&quot;</li>
+<li><strong>Context (הקשר):</strong> ספק מידע רקע רלוונטי</li>
+<li><strong>Format (תבנית):</strong> הגדר את מבנה הפלט הרצוי — JSON, bullet points, פסקאות</li>
+<li><strong>Role (תפקיד):</strong> &quot;אתה מומחה לאבטחת מידע עם 10 שנות ניסיון&quot;</li>
+<li><strong>Examples (דוגמאות):</strong> הראה ל-LLM את הפלט הרצוי דרך דוגמאות</li>
+</ol>
+<p><strong>מה להימנע:</strong></p>
+<ul>
+<li>prompts עמומים (&quot;כתוב משהו טוב&quot;)</li>
+<li>הנחת הנחות שלא נאמרו בprompt</li>
+<li>prompts ארוכים מדי עם הוראות סותרות</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Prompt engineering הוא iterative — בדוק, מדוד, שפר</li>
+<li>System prompt ל-behavior כללי; User prompt לבקשה ספציפית</li>
+<li>Temperature = creativity level: 0 = deterministic, 1 = creative</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה Few-Shot Prompting?</h3>
+<p><strong>תשובה:</strong>
+Few-Shot Prompting היא טכניקה שבה מספקים ל-LLM כמה דוגמאות (2-10) של input/output רצוי בתוך ה-prompt עצמו, לפני הבקשה האמיתית.</p>
+<p><strong>סוגים:</strong></p>
+<p><strong>Zero-Shot:</strong> ללא דוגמאות — מסתמכים על יכולות ה-LLM הבסיסיות</p>
+<pre><code>סווג את הסנטימנט של הביקורת: &quot;המוצר היה גרוע מאוד&quot;
+</code></pre>
+<p><strong>One-Shot:</strong> דוגמה אחת</p>
+<pre><code>ביקורת: &quot;המוצר מעולה!&quot; → סנטימנט: חיובי
+ביקורת: &quot;המוצר היה גרוע מאוד&quot; → סנטימנט:
+</code></pre>
+<p><strong>Few-Shot:</strong> כמה דוגמאות</p>
+<pre><code>ביקורת: &quot;המוצר מעולה!&quot; → סנטימנט: חיובי
+ביקורת: &quot;לא שווה את הכסף&quot; → סנטימנט: שלילי
+ביקורת: &quot;בסדר, לא יוצא דופן&quot; → סנטימנט: ניטרלי
+ביקורת: &quot;המוצר היה גרוע מאוד&quot; → סנטימנט:
+</code></pre>
+<p><strong>מתי Few-Shot עוזר:</strong></p>
+<ul>
+<li>כאשר הformat חשוב ומדויק (JSON ספציפי, HTML template)</li>
+<li>כאשר יש &quot;רוח&quot; מסוימת שקשה להסביר במילים</li>
+<li>כאשר Zero-Shot מייצר תוצאות לא עקביות</li>
+</ul>
+<p><strong>טיפים:</strong></p>
+<ul>
+<li>דוגמאות שונות ומגוונות = טוב יותר מדוגמאות דומות</li>
+<li>סדר הדוגמאות משפיע — השימה האחרונה לפני הבקשה הכי משפיעה</li>
+<li>4-8 דוגמאות בדרך כלל מספיק</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Few-shot = in-context learning — המודל לא לומד לצמיתות, רק ב-context</li>
+<li>זול מfine-tuning אך פחות יעיל לtasks מורכבים מאוד</li>
+<li>Dynamic few-shot: בחר דוגמאות רלוונטיות דינמית (לפי similarity)</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה זה Chain-of-Thought Prompting?</h3>
+<p><strong>תשובה:</strong>
+Chain-of-Thought (CoT) היא טכניקה שגורמת ל-LLM לפתוח את חשיבתו ב&quot;צעדים ביניים&quot; לפני מתן התשובה הסופית. הוכח שמשפר מאוד ביצועים ב-reasoning tasks.</p>
+<p><strong>הרעיון:</strong>
+LLMs נוטים לטעות כאשר קופצים ישר לתשובה. על ידי &quot;חשיבה בקול&quot; צעד אחרי צעד, המודל עושה פחות טעויות.</p>
+<p><strong>Zero-Shot CoT:</strong>
+הוספת &quot;Let's think step by step&quot; או &quot;בוא נחשוב צעד אחרי צעד&quot; לסוף ה-prompt.
+מחקר הוכיח שרק הוספת ביטוי זה משפרת accuracy ב-arithmetic ו-reasoning tasks.</p>
+<p><strong>Few-Shot CoT:</strong>
+ספק דוגמאות שכוללות reasoning מלא:</p>
+<pre><code>שאלה: אם יש לי 5 תפוחים ואני נותן 2 לחבר, כמה נשארו?
+חשיבה: אני מתחיל עם 5 תפוחים. אני נותן 2. 5-2=3.
+תשובה: 3 תפוחים.
+
+שאלה: אם חנות קנתה 100 מוצרים ב-$5 כל אחד ומכרה 70 ב-$8, מה הרווח?
+חשיבה:
+</code></pre>
+<p><strong>Self-Consistency:</strong>
+הרץ את אותה שאלה מספר פעמים עם temperature &gt; 0, קח את התשובה הנפוצה ביותר (majority vote). משפר accuracy ב-CoT.</p>
+<p><strong>Tree of Thoughts (ToT):</strong>
+הרחבה של CoT — חוקר עצים של מחשבות ומאפשר backtracking. שימושי לbעיות מורכבות יותר.</p>
+<p><strong>מתי CoT מועיל:</strong></p>
+<ul>
+<li>Math word problems</li>
+<li>Multi-step reasoning</li>
+<li>Code debugging</li>
+<li>Complex analysis</li>
+</ul>
+<p><strong>מתי CoT לא עוזר:</strong></p>
+<ul>
+<li>Simple factual questions (CoT עלול לבלבל)</li>
+<li>Creative tasks</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>&quot;Let's think step by step&quot; היא אחת ה-prompts היעילות ביותר שהתגלו</li>
+<li>CoT עובד טוב יותר על מודלים גדולים (&gt;100B parameters)</li>
+<li>Self-Consistency משפרת accuracy אך מכפילה עלות</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה זה ReAct Pattern?</h3>
+<p><strong>תשובה:</strong>
+ReAct (Reasoning + Acting) הוא דפוס prompting שמשלב reasoning (חשיבה) עם action (פעולה) — ה-LLM לא רק &quot;חושב&quot; אלא גם קורא כלים ומשתמש בתוצאותיהם.</p>
+<p><strong>ה-flow:</strong></p>
+<pre><code>Thought: צריך לדעת את מחיר המניה הנוכחי של Apple
+Action: search(&quot;Apple stock price today&quot;)
+Observation: AAPL = $185.50
+Thought: עכשיו יכול לענות על השאלה
+Answer: מחיר מניית Apple היום הוא $185.50
+</code></pre>
+<p><strong>למה ReAct?</strong>
+LLMs מוגבלים בידע שלהם (knowledge cutoff). ReAct מאפשר להם לגשת לכלים חיצוניים:</p>
+<ul>
+<li>Web search</li>
+<li>Code execution</li>
+<li>Database queries</li>
+<li>API calls</li>
+<li>Calculator</li>
+</ul>
+<p><strong>ReAct vs Chain-of-Thought:</strong></p>
+<ul>
+<li>CoT: חשיבה בלבד, ללא כלים</li>
+<li>ReAct: חשיבה + שימוש בכלים + תצפית על תוצאות</li>
+<li>ReAct מתאים לtasks שדורשים מידע עדכני או חישובים</li>
+</ul>
+<p><strong>Grounding ב-ReAct:</strong>
+ה-&quot;Observation&quot; מה-tools מנמיך hallucinations — ה-LLM מסתמך על נתונים אמיתיים.</p>
+<p><strong>מימוש:</strong>
+LangChain, LlamaIndex, AutoGen — כולם תומכים ב-ReAct agents.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>ReAct = הבסיס לרוב AI agent frameworks</li>
+<li>Tool calling (function calling ב-OpenAI API) הוא מימוש מודרני של ReAct</li>
+<li>חשוב להגביל tools ולוולידציה outputs — security concern</li>
+</ul>
+<hr>
+<h3>שאלה 5: כיצד בונים prompts עמידים לproduction?</h3>
+<p><strong>תשובה:</strong>
+Prompt Engineering לproduction שונה ממשחק עם prompts ב-playground. יש לבנות prompts שעובדים עקבית, בטוחים, ומדידים.</p>
+<p><strong>1. Prompt Templates:</strong>
+אל תשמור prompts כ-hardcoded strings. השתמש בtemplates עם variables:</p>
+<pre><code class="language-python">SYSTEM_PROMPT = &quot;&quot;&quot;
+אתה עוזר לתמיכת לקוחות של {company_name}.
+ענה תמיד ב{language}.
+אם אינך יודע — אמור &quot;לא יודע&quot;.
+&quot;&quot;&quot;
+</code></pre>
+<p><strong>2. Output Parsing:</strong>
+דרוש output מובנה (JSON) כדי לפרסר בצורה אמינה:</p>
+<ul>
+<li>&quot;ענה תמיד ב-JSON עם שדות: {answer: string, confidence: number, sources: list}&quot;</li>
+<li>השתמש ב-Pydantic/Structured Outputs של OpenAI</li>
+</ul>
+<p><strong>3. Guardrails:</strong></p>
+<ul>
+<li>Input validation: בדוק שהuser לא מנסה prompt injection</li>
+<li>Output validation: וולידציה שהfound עומד בtemplates ובheuristics</li>
+<li>Retry logic: אם הparse נכשל, נסה שוב עם הוראה לתיקון</li>
+</ul>
+<p><strong>4. Prompt Versioning:</strong></p>
+<ul>
+<li>שמור prompts ב-version control</li>
+<li>Tag כל prompt version עם ביצועים</li>
+<li>A/B test prompts כמו features</li>
+</ul>
+<p><strong>5. Evaluation Framework:</strong></p>
+<ul>
+<li>בנה eval set: שאלות + תשובות נכונות ידועות</li>
+<li>מדוד: correctness, format adherence, latency, cost</li>
+<li>הרץ evals לפני כל שינוי בprompt</li>
+</ul>
+<p><strong>6. Prompt Injection Defense:</strong>
+כאשר user input חלק מה-prompt, מנע ניסיונות injection:</p>
+<ul>
+<li>Sanitize user input</li>
+<li>Use separate message roles (system/user/assistant)</li>
+<li>Validate שה-output לא &quot;ברח&quot; מהformat המצופה</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Production prompts = code — גרסאות, tests, monitoring</li>
+<li>Structured output = json_mode ב-OpenAI, Pydantic</li>
+<li>Prompt injection הוא security vulnerability אמיתי</li>
+</ul>
+<h2>סיכום</h2>
+<p>Prompt Engineering הפכה ממיומנות ניסיונית לכישור הנדסי בשל. טכניקות כמו Few-Shot ו-Chain-of-Thought משפרות דרמטית את איכות התוצאות, ו-ReAct מאפשר ל-LLMs לפעול ב-environment דינמי עם כלים. בproduction, prompts צריכים להיות מנוהלים כcode — עם versioning, evals, ו-guardrails. בראיון, הראה שאתה מבין שprompts אינם &quot;טריק&quot; — הם ממשק תכנותי לשפות גדולות.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Prompt Engineering Guide (promptingguide.ai)</li>
+<li>OpenAI Cookbook</li>
+<li>Chain-of-Thought Prompting — Wei et al. (2022)</li>
+<li>ReAct: Synergizing Reasoning and Acting — Yao et al. (2022)</li>
+</ul>

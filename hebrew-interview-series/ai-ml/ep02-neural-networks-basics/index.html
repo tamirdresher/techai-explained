@@ -1,0 +1,162 @@
+<h1>רשתות נוירונים — שכבות, פונקציות הפעלה ו-Backpropagation</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>מבנה רשת נוירונים: שכבות, נוירונים ומשקלות</li>
+<li>פונקציות הפעלה ותפקידן — ReLU, Sigmoid, Softmax</li>
+<li>כיצד Backpropagation לומד מטעויות ומעדכן משקלות</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: כיצד בנויה רשת נוירונים?</h3>
+<p><strong>תשובה:</strong>
+רשת נוירונים מלאכותית (Artificial Neural Network — ANN) מורכבת מ<strong>שכבות</strong> (layers) של <strong>נוירונים</strong> (nodes) שמחוברים ביניהם.</p>
+<p><strong>מרכיבים עיקריים:</strong></p>
+<ol>
+<li>
+<p><strong>Input Layer (שכבת קלט):</strong> מקבלת את הנתונים הגולמיים. כמות הנוירונים שווה למספר ה-features. לא מבצעת חישוב, רק מעבירה.</p>
+</li>
+<li>
+<p><strong>Hidden Layers (שכבות נסתרות):</strong> שכבה אחת או יותר שמבצעות חישובים. כל נוירון מחשב סכום משוקלל של הקלטות ממנו ומפעיל עליו פונקציית הפעלה (activation function).</p>
+</li>
+<li>
+<p><strong>Output Layer (שכבת פלט):</strong> מייצרת את הפלט הסופי. מספר הנוירונים תואם את מספר המחלקות (binary → 1 נוירון, multi-class → N נוירונים).</p>
+</li>
+</ol>
+<p><strong>החישוב בנוירון בודד:</strong>
+<code>output = activation(w1*x1 + w2*x2 + ... + wn*xn + bias)</code></p>
+<p>כאשר <code>w</code> = משקלות (weights), <code>x</code> = קלטות, <code>bias</code> = הוספת גמישות.</p>
+<p><strong>Deep Learning:</strong> רשת עם שכבות נסתרות רבות. &quot;עומק&quot; = מספר שכבות. ההירארכיה מאפשרת ללמוד features מורכבים יותר בכל שכבה.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>כל שכבה נסתרת לומדת ייצוג (representation) מופשט יותר</li>
+<li>יותר שכבות ≠ תמיד טוב — יש בעיית Vanishing Gradient בעמקי הרשת</li>
+<li>Width (רוחב) ו-Depth (עומק) הם hyperparameters שמשפיעים על capacity</li>
+</ul>
+<hr>
+<h3>שאלה 2: מה זה פונקציות הפעלה ולמה הן נחוצות?</h3>
+<p><strong>תשובה:</strong>
+פונקציית הפעלה (Activation Function) מוסיפה <strong>אי-לינאריות</strong> לרשת. בלעדיה, רשת של שכבות רבות הייתה שקולה לשכבה לינארית אחת — לא יכולה ללמוד patterns מורכבים.</p>
+<p><strong>פונקציות נפוצות:</strong></p>
+<p><strong>1. Sigmoid:</strong>
+<code>σ(x) = 1 / (1 + e^(-x))</code> → טווח: (0, 1)</p>
+<ul>
+<li>שימוש: פלט binary classification (הסתברות)</li>
+<li>בעיה: <strong>Vanishing Gradient</strong> — בערכים קיצוניים, gradient ≈ 0 → רשת עמוקה לא לומדת</li>
+</ul>
+<p><strong>2. ReLU (Rectified Linear Unit):</strong>
+<code>f(x) = max(0, x)</code> → מחזיר x אם חיובי, אחרת 0</p>
+<ul>
+<li>הנפוץ ביותר היום ל-hidden layers</li>
+<li>מהיר לחישוב, gradient=1 לערכים חיוביים</li>
+<li>בעיה: <strong>Dying ReLU</strong> — נוירונים שמקבלים ערכים שליליים תמיד &quot;מתים&quot; (gradient=0)</li>
+<li>פתרונות: Leaky ReLU, ELU</li>
+</ul>
+<p><strong>3. Softmax:</strong>
+מחשב הסתברויות עבור multi-class classification — כל output בטווח (0,1) והסכום = 1</p>
+<ul>
+<li>שימוש: שכבת פלט לסיווג רב-מחלקתי</li>
+</ul>
+<p><strong>4. Tanh:</strong>
+טווח (-1, 1). דומה ל-sigmoid אך ממורכז סביב 0. עדיף על sigmoid ל-hidden layers אך גם סובל מ-vanishing gradient.</p>
+<p><strong>5. GELU (Gaussian Error Linear Unit):</strong>
+שימוש ב-Transformers ו-BERT. גרסה חלקה ומשופרת של ReLU.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>ReLU = הבחירה הראשונה ל-hidden layers ברוב הרשתות</li>
+<li>Sigmoid ו-Softmax ל-output layers בלבד</li>
+<li>Vanishing Gradient = הסיבה ש-ReLU החליף Sigmoid ב-hidden layers</li>
+</ul>
+<hr>
+<h3>שאלה 3: כיצד Backpropagation עובד?</h3>
+<p><strong>תשובה:</strong>
+Backpropagation הוא האלגוריתם שמאפשר לרשת ללמוד — הוא מחשב כיצד לשנות כל משקל כדי להפחית את שגיאת הפלט.</p>
+<p><strong>שני שלבים:</strong></p>
+<p><strong>1. Forward Pass (מעבר קדימה):</strong></p>
+<ul>
+<li>הקלט עובר משכבה לשכבה עד לפלט</li>
+<li>מחשבים את שגיאת הפלט מול התשובה הנכונה (Loss Function)</li>
+<li>Loss פופולארי: Cross-Entropy לסיווג, MSE לרגרסיה</li>
+</ul>
+<p><strong>2. Backward Pass (מעבר לאחור) — Backpropagation:</strong></p>
+<ul>
+<li>מחשבים את הנגזרת של ה-loss לגבי כל משקל (gradient)</li>
+<li>משתמשים ב-Chain Rule כדי לחשב gradients לכל שכבה מהסוף להתחלה</li>
+<li>מעדכנים משקלות בכיוון שמפחית ה-loss: <code>w = w - learning_rate × gradient</code></li>
+</ul>
+<p><strong>Gradient Descent:</strong></p>
+<ul>
+<li><strong>Batch GD:</strong> מחשב gradient על כל הנתונים — מדויק אך איטי</li>
+<li><strong>Stochastic GD (SGD):</strong> gradient על דוגמה אחת — מהיר אך רועש</li>
+<li><strong>Mini-batch GD:</strong> gradient על batch קטן — איזון בין מהירות לדיוק. הנפוץ בפועל</li>
+</ul>
+<p><strong>Optimizers מתקדמים:</strong></p>
+<ul>
+<li><strong>Adam:</strong> משלב Momentum ו-RMSProp. Learning rate adaptive לכל פרמטר. הנפוץ ביותר כיום</li>
+<li><strong>AdamW:</strong> Adam עם weight decay — טוב ל-Transformers</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Backprop = Chain Rule + Gradient Descent</li>
+<li>Learning Rate חשוב — גדול מדי = לא מתכנס, קטן מדי = איטי</li>
+<li>Adam הוא baseline optimizer טוב לרוב הבעיות</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה זה Regularization ולמה זה חשוב?</h3>
+<p><strong>תשובה:</strong>
+Regularization הוא קבוצת טכניקות למניעת overfitting — גרימה למודל להיות &quot;פשוט יותר&quot; ולהכליל טוב יותר על נתונים חדשים.</p>
+<p><strong>L1 Regularization (Lasso):</strong>
+מוסיף לloss <code>λ × Σ|w|</code>. גורם לחלק מהמשקלות להתאפס — מייצר <strong>sparse models</strong>. שימושי ל-feature selection.</p>
+<p><strong>L2 Regularization (Ridge / Weight Decay):</strong>
+מוסיף לloss <code>λ × Σw²</code>. מוריד משקלות גדולים אך לא מאפס — גורם למשקלות להיות קטנים ומפוזרים. הנפוץ יותר.</p>
+<p><strong>Dropout:</strong>
+בכל צעד אימון, מבטל אקראית חלק מהנוירונים (למשל 20%). הרשת לומדת להסתמך על patterns מרובים ולא על נוירונים ספציפיים. רק בשלב training — ב-inference כל הנוירונים פעילים.</p>
+<p><strong>Early Stopping:</strong>
+עוצרים אימון כאשר ה-validation loss מפסיק להתפחית. פשוט ויעיל.</p>
+<p><strong>Batch Normalization:</strong>
+מנרמל את הpre-activations בכל שכבה. מאיץ אימון ומאפשר learning rates גבוהים יותר. משמש כ-regularizer.</p>
+<p><strong>Data Augmentation:</strong>
+הגדלה מלאכותית של dataset — לתמונות: סיבוב, חיתוך, שינוי צבע. מעלה גיוון בנתוני אימון.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>L2 + Dropout + Early Stopping = combination נפוץ</li>
+<li>Regularization strength (λ) הוא hyperparameter שכדאי לכוונן</li>
+<li>Dropout שימושי ל-fully connected layers; BatchNorm ל-convolutional</li>
+</ul>
+<hr>
+<h3>שאלה 5: מה ההבדל בין CNN ל-RNN?</h3>
+<p><strong>תשובה:</strong>
+שני סוגי ארכיטקטורות ייעודיות ל-data שונה:</p>
+<p><strong>CNN (Convolutional Neural Network):</strong></p>
+<ul>
+<li>מיועד לנתוני grid: תמונות, אות (audio), טקסט כspatial data</li>
+<li>מבצע convolution — מסנן קטן (kernel) שסורק על הקלט ומזהה patterns מקומיים</li>
+<li><strong>Pooling layers</strong> מפחיתות מימדים ומוסיפות invariance</li>
+<li>ארכיטקטורות: ResNet, VGG, EfficientNet</li>
+<li>שימוש: זיהוי תמונות, object detection, semantic segmentation</li>
+</ul>
+<p><strong>RNN (Recurrent Neural Network):</strong></p>
+<ul>
+<li>מיועד לנתונים סדרתיים (sequential): טקסט, time series, audio</li>
+<li>שומר <strong>hidden state</strong> שמועבר בין צעדים — &quot;זיכרון&quot; של הרשת</li>
+<li>בעיה: Vanishing Gradient לרצפים ארוכים — RNN שוכח מידע ישן</li>
+</ul>
+<p><strong>LSTM (Long Short-Term Memory):</strong>
+שיפור של RNN — מוסיף gates (Forget, Input, Output) שמאפשרים לשלוט מה לשמור ומה לשכוח. פתרון טוב לlong-range dependencies.</p>
+<p><strong>GRU (Gated Recurrent Unit):</strong>
+גרסה פשוטה יותר של LSTM עם פחות פרמטרים, לרוב ביצועים דומים.</p>
+<p><strong>עכשיו:</strong> Transformers החליפו את RNNs ברוב tasks של NLP — הם מקבילים יותר ואינם סובלים מ-vanishing gradient.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>CNN = מרחבי (spatial); RNN = סדרתי (sequential)</li>
+<li>LSTM פתרה את בעיית ה-vanishing gradient ב-RNN</li>
+<li>Transformers החליפו RNN/LSTM ב-NLP כיום</li>
+</ul>
+<h2>סיכום</h2>
+<p>רשתות נוירונים הן הבסיס של modern deep learning. הבנת ארכיטקטורת שכבות, פונקציות הפעלה, backpropagation ו-regularization היא קריטית לכל ראיון ML. בפרק הבא נעמיק ב-Transformers ו-LLMs — הארכיטקטורה שמניעת את מהפכת ה-AI המודרנית.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Deep Learning — Goodfellow, Bengio, Courville</li>
+<li>Fast.ai Practical Deep Learning Course</li>
+<li>3Blue1Brown — Neural Networks Series (YouTube)</li>
+<li>PyTorch Documentation</li>
+</ul>

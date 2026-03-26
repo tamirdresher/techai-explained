@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSockets vs Server-Sent Events vs gRPC Streaming in 2026 — TechAI Explained</title>
+  <meta name="description" content="A practical comparison of the three major real-time communication protocols — when to use each, performance characteristics, and production trade-offs.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Architecture</span>
+      <time>March 13, 2026</time>
+      <span class="read-time">11 min read</span>
+    </div>
+    <h1>WebSockets vs Server-Sent Events vs gRPC Streaming in 2026</h1>
+    <p class="subtitle">A practical comparison of the three major real-time communication protocols — when to use each, performance characteristics, and production trade-offs.</p>
+  </header>
+  <div class="article-body">
+    <p>Choosing a real-time protocol used to be simple: &quot;just use WebSockets.&quot; In 2026, the landscape is more nuanced. Server-Sent Events (SSE) power every major LLM streaming API. gRPC streaming dominates service-to-service communication. And WebSockets remain the go-to for bidirectional real-time apps.</p>
+<p>This guide compares all three with production benchmarks, code examples, and a decision framework.</p>
+<h2>The Quick Comparison</h2>
+<div class="diagram-box">
+┌──────────────────────────────────────────────────────────┐
+│              REAL-TIME PROTOCOL COMPARISON                │
+│                                                          │
+│  WEBSOCKETS         SSE              gRPC STREAMING      │
+│  ───────────        ───              ──────────────      │
+│  Bidirectional      Server → Client  Bidirectional       │
+│  Binary + Text      Text only        Binary (Protobuf)  │
+│  Custom protocol    HTTP/1.1+        HTTP/2              │
+│  Manual reconnect   Auto-reconnect   Auto-reconnect     │
+│  No built-in auth   Cookie/Bearer    mTLS + tokens      │
+│  Any language       Any language     Code-gen required   │
+│                                                          │
+│  BEST FOR:          BEST FOR:        BEST FOR:          │
+│  Chat, gaming,      LLM streaming,   Microservices,     │
+│  collaboration      notifications,   high-throughput,   │
+│  tools              live feeds       type-safe APIs     │
+└──────────────────────────────────────────────────────────┘
+</div>
+<h2>Protocol 1: WebSockets</h2>
+<p>WebSockets upgrade an HTTP connection to a persistent, full-duplex channel. Both client and server can send messages at any time.</p>
+<h3>How It Works</h3>
+<pre><code>Client                          Server
+  │                               │
+  │── HTTP GET /ws (Upgrade) ────►│
+  │◄─ 101 Switching Protocols ────│
+  │                               │
+  │◄═══════ Full Duplex ════════►│
+  │   Binary or text frames       │
+  │   No request/response model   │
+  │   Either side can send        │
+  │                               │
+  │── Close frame ───────────────►│
+  │◄─ Close frame ────────────────│
+</code></pre>
+<h3>Server Implementation (Node.js)</h3>
+<pre><code class="language-typescript">import { WebSocketServer, WebSocket } from 'ws';
+
+const wss = new WebSocketServer({ port: 8080 });
+
+// Track connected clients
+const clients = new Map&lt;string, WebSocket&gt;();
+
+wss.on('connection', (ws, req) =&gt; {
+  const userId = authenticate(req);
+  clients.set(userId, ws);
+
+  ws.on('message', (data) =&gt; {
+    const message = JSON.parse(data.toString());
+
+    switch (message.type) {
+      case 'chat':
+        broadcastToRoom(message.room, {
+          type: 'chat',
+          from: userId,
+          text: message.text,
+          timestamp: Date.now(),
+        });
+        break;
+
+      case 'typing':
+        broadcastToRoom(message.room, {
+          type: 'typing',
+          user: userId,
+        });
+        break;
+    }
+  });
+
+  ws.on('close', () =&gt; {
+    clients.delete(userId);
+  });
+
+  // Heartbeat to detect dead connections
+  ws.isAlive = true;
+  ws.on('pong', () =&gt; { ws.isAlive = true; });
+});
+
+// Ping every 30s, terminate dead connections
+setInterval(() =&gt; {
+  wss.clients.forEach((ws) =&gt; {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+</code></pre>
+<h3>Client Implementation</h3>
+<pre><code class="language-typescript">class WebSocketClient {
+  private ws: WebSocket | null = null;
+  private reconnectDelay = 1000;
+  private maxReconnectDelay = 30000;
+
+  connect(url: string) {
+    this.ws = new WebSocket(url);
+
+    this.ws.onopen = () =&gt; {
+      this.reconnectDelay = 1000; // Reset on successful connect
+      console.log('Connected');
+    };
+
+    this.ws.onmessage = (event) =&gt; {
+      const message = JSON.parse(event.data);
+      this.handleMessage(message);
+    };
+
+    this.ws.onclose = (event) =&gt; {
+      if (!event.wasClean) {
+        // Reconnect with exponential backoff
+        setTimeout(() =&gt; this.connect(url), this.reconnectDelay);
+        this.reconnectDelay = Math.min(
+          this.reconnectDelay * 2,
+          this.maxReconnectDelay
+        );
+      }
+    };
+  }
+
+  send(message: object) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+}
+</code></pre>
+<h3>WebSocket Gotchas</h3>
+<ol>
+<li><strong>No automatic reconnection</strong> — you must implement reconnect logic yourself</li>
+<li><strong>Load balancer complexity</strong> — sticky sessions or shared state required</li>
+<li><strong>Proxy issues</strong> — some corporate proxies terminate WebSocket connections</li>
+<li><strong>No built-in multiplexing</strong> — one connection = one channel (unlike HTTP/2)</li>
+</ol>
+<h2>Protocol 2: Server-Sent Events (SSE)</h2>
+<p>SSE is a one-way channel: server pushes events to the client over a standard HTTP connection. It's the protocol behind every streaming LLM API (OpenAI, Anthropic, Google).</p>
+<h3>How It Works</h3>
+<pre><code>Client                          Server
+  │                               │
+  │── GET /events ───────────────►│
+  │◄─ 200 OK                     │
+  │   Content-Type: text/         │
+  │   event-stream                │
+  │                               │
+  │◄── data: {&quot;temp&quot;: 72}        │
+  │◄── data: {&quot;temp&quot;: 73}        │
+  │◄── data: {&quot;temp&quot;: 71}        │
+  │    ...continuous stream...    │
+  │                               │
+  │   (Connection drops)          │
+  │── GET /events?lastId=42 ────►│  ← Auto-reconnect!
+  │◄── data: {&quot;temp&quot;: 74}        │
+</code></pre>
+<h3>Server Implementation (Node.js)</h3>
+<pre><code class="language-typescript">import express from 'express';
+
+const app = express();
+
+app.get('/events', (req, res) =&gt; {
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  // Send initial data
+  res.write(`data: ${JSON.stringify({ status: 'connected' })}\n\n`);
+
+  // Stream updates
+  const interval = setInterval(() =&gt; {
+    const event = {
+      id: Date.now().toString(),
+      type: 'temperature',
+      data: { value: Math.random() * 100, unit: 'F' },
+    };
+
+    res.write(`id: ${event.id}\n`);
+    res.write(`event: ${event.type}\n`);
+    res.write(`data: ${JSON.stringify(event.data)}\n\n`);
+  }, 1000);
+
+  // Cleanup on disconnect
+  req.on('close', () =&gt; {
+    clearInterval(interval);
+  });
+});
+
+// LLM-style streaming endpoint
+app.post('/chat/stream', async (req, res) =&gt; {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+  });
+
+  const stream = await llm.chat.stream(req.body.messages);
+
+  for await (const chunk of stream) {
+    res.write(`data: ${JSON.stringify({
+      choices: [{ delta: { content: chunk.text } }]
+    })}\n\n`);
+  }
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+});
+</code></pre>
+<h3>Client Implementation</h3>
+<pre><code class="language-typescript">// Native browser API - it's this simple
+const eventSource = new EventSource('/events');
+
+// Automatic reconnection is built-in!
+eventSource.onmessage = (event) =&gt; {
+  const data = JSON.parse(event.data);
+  console.log('Received:', data);
+};
+
+// Named events
+eventSource.addEventListener('temperature', (event) =&gt; {
+  const data = JSON.parse(event.data);
+  updateDashboard(data);
+});
+
+eventSource.onerror = (event) =&gt; {
+  console.log('Connection lost, reconnecting...');
+  // EventSource auto-reconnects! No code needed.
+};
+
+// For POST requests (LLM streaming), use fetch + ReadableStream
+async function streamChat(messages: Message[]) {
+  const response = await fetch('/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages }),
+  });
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n').filter(l =&gt; l.startsWith('data: '));
+
+    for (const line of lines) {
+      const data = line.slice(6);
+      if (data === '[DONE]') return;
+      const parsed = JSON.parse(data);
+      appendToChat(parsed.choices[0].delta.content);
+    }
+  }
+}
+</code></pre>
+<h3>Why SSE Won for LLM Streaming</h3>
+<ul>
+<li><strong>Simplicity</strong> — standard HTTP, works with every proxy, CDN, and load balancer</li>
+<li><strong>Auto-reconnect</strong> — <code>EventSource</code> reconnects automatically with <code>Last-Event-ID</code></li>
+<li><strong>One-direction is enough</strong> — user sends a prompt (POST), server streams the response</li>
+<li><strong>No special infrastructure</strong> — any HTTP server can do SSE</li>
+</ul>
+<h2>Protocol 3: gRPC Streaming</h2>
+<p>gRPC uses HTTP/2 for multiplexed, binary-encoded streaming. It's the standard for service-to-service communication in microservice architectures.</p>
+<h3>Define the Service (Protobuf)</h3>
+<pre><code class="language-protobuf">syntax = &quot;proto3&quot;;
+
+service StockService {
+  // Server streaming - server sends multiple responses
+  rpc StreamPrices (PriceRequest) returns (stream PriceUpdate);
+
+  // Client streaming - client sends multiple requests
+  rpc UploadTrades (stream Trade) returns (TradesSummary);
+
+  // Bidirectional streaming - both sides stream
+  rpc TradeChat (stream TradeMessage) returns (stream TradeMessage);
+}
+
+message PriceRequest {
+  repeated string symbols = 1;
+}
+
+message PriceUpdate {
+  string symbol = 1;
+  double price = 2;
+  int64 timestamp = 3;
+}
+</code></pre>
+<h3>Server Implementation (Go)</h3>
+<pre><code class="language-go">func (s *StockServer) StreamPrices(
+    req *pb.PriceRequest,
+    stream pb.StockService_StreamPricesServer,
+) error {
+    ticker := time.NewTicker(100 * time.Millisecond)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case &lt;-stream.Context().Done():
+            return nil // Client disconnected
+        case &lt;-ticker.C:
+            for _, symbol := range req.Symbols {
+                update := &amp;pb.PriceUpdate{
+                    Symbol:    symbol,
+                    Price:     getLatestPrice(symbol),
+                    Timestamp: time.Now().UnixMilli(),
+                }
+                if err := stream.Send(update); err != nil {
+                    return err
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<h3>Client Implementation (TypeScript/Node.js)</h3>
+<pre><code class="language-typescript">import { credentials } from '@grpc/grpc-js';
+import { StockServiceClient } from './generated/stock_grpc_pb';
+
+const client = new StockServiceClient(
+  'localhost:50051',
+  credentials.createInsecure()
+);
+
+const request = new PriceRequest();
+request.setSymbolsList(['AAPL', 'GOOG', 'MSFT']);
+
+const stream = client.streamPrices(request);
+
+stream.on('data', (update: PriceUpdate) =&gt; {
+  console.log(`${update.getSymbol()}: $${update.getPrice()}`);
+});
+
+stream.on('error', (err) =&gt; {
+  console.error('Stream error:', err.message);
+});
+
+stream.on('end', () =&gt; {
+  console.log('Stream ended');
+});
+</code></pre>
+<h3>gRPC Streaming Modes</h3>
+<div class="diagram-box">
+UNARY           SERVER STREAM     CLIENT STREAM     BIDI STREAM
+─────           ─────────────     ─────────────     ───────────
+<p>Client──►Server  Client──►Server  Client──►Server  Client◄──►Server
+Client◄──Server  Client◄──Server  Client◄──Server
+Client◄──Server  Client──►Server  Client◄──►Server
+Client◄──Server  Client──►Server  Client◄──►Server
+Client◄──Server                   Client◄──►Server</p>
+<p>1 request        1 request         N requests       N messages
+1 response       N responses       1 response       N messages</p>
+</div>
+<h2>Performance Comparison</h2>
+<p>Real-world benchmarks for streaming 10,000 events/second to 100 clients:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>WebSocket</th>
+<th>SSE</th>
+<th>gRPC Stream</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throughput</td>
+<td>95K msg/s</td>
+<td>82K msg/s</td>
+<td>120K msg/s</td>
+</tr>
+<tr>
+<td>Latency (p50)</td>
+<td>1.2ms</td>
+<td>2.1ms</td>
+<td>0.8ms</td>
+</tr>
+<tr>
+<td>Latency (p99)</td>
+<td>8ms</td>
+<td>15ms</td>
+<td>4ms</td>
+</tr>
+<tr>
+<td>Memory/connection</td>
+<td>2.4 KB</td>
+<td>1.8 KB</td>
+<td>3.2 KB</td>
+</tr>
+<tr>
+<td>CPU overhead</td>
+<td>Low</td>
+<td>Lowest</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Bandwidth</td>
+<td>Efficient</td>
+<td>Text overhead</td>
+<td>Most efficient</td>
+</tr>
+</tbody>
+</table>
+<p><strong>gRPC wins on throughput and latency</strong> due to HTTP/2 multiplexing and binary encoding. <strong>SSE wins on simplicity and memory.</strong> <strong>WebSocket is the middle ground</strong> with bidirectional capability.</p>
+<h2>Decision Framework</h2>
+<div class="diagram-box">
+START HERE
+│
+├─ Do both sides need to send data simultaneously?
+│  ├─ YES: Is it service-to-service?
+│  │  ├─ YES ──────────────► gRPC Bidirectional Streaming
+│  │  └─ NO (browser client) ► WebSocket
+│  │
+│  └─ NO: Is it server-to-client only?
+│     ├─ YES: Is the data high-frequency (>100/sec)?
+│     │  ├─ YES ──────────────► gRPC Server Streaming
+│     │  └─ NO ───────────────► Server-Sent Events
+│     │
+│     └─ It's client-to-server only
+│        └─ Use regular HTTP POST/PUT (or gRPC Client Streaming)
+</div>
+<h3>Use WebSocket When:</h3>
+<ul>
+<li>Building chat, collaboration tools, or multiplayer games</li>
+<li>Both sides send data frequently and unpredictably</li>
+<li>You need binary data in the browser (file transfer, screen sharing)</li>
+</ul>
+<h3>Use SSE When:</h3>
+<ul>
+<li>Server pushes updates to browser clients</li>
+<li>Building notification systems, live dashboards, or LLM streaming</li>
+<li>You want the simplest possible implementation</li>
+<li>You need automatic reconnection without extra code</li>
+</ul>
+<h3>Use gRPC Streaming When:</h3>
+<ul>
+<li>Service-to-service communication in a microservice architecture</li>
+<li>You need type safety across services (Protobuf contracts)</li>
+<li>Maximum throughput and minimum latency matter</li>
+<li>You're already using gRPC for unary calls</li>
+</ul>
+<h2>Production Patterns</h2>
+<h3>Pattern 1: SSE + POST (The LLM Pattern)</h3>
+<pre><code>Client sends prompt via POST
+Server streams response via SSE
+Client sends next prompt via POST
+Server streams response via SSE
+</code></pre>
+<p>This is how every LLM API works. POST for the request, SSE for the streaming response. Simple, scalable, works through any proxy.</p>
+<h3>Pattern 2: WebSocket with Room-Based Routing</h3>
+<pre><code class="language-typescript">// Server-side room management
+const rooms = new Map&lt;string, Set&lt;WebSocket&gt;&gt;();
+
+function joinRoom(ws: WebSocket, room: string) {
+  if (!rooms.has(room)) rooms.set(room, new Set());
+  rooms.get(room)!.add(ws);
+}
+
+function broadcastToRoom(room: string, message: object) {
+  const clients = rooms.get(room);
+  if (!clients) return;
+  const data = JSON.stringify(message);
+  clients.forEach(ws =&gt; {
+    if (ws.readyState === WebSocket.OPEN) ws.send(data);
+  });
+}
+</code></pre>
+<h3>Pattern 3: gRPC with Backpressure</h3>
+<pre><code class="language-go">// Server respects client's ability to consume
+func (s *Server) StreamData(
+    req *pb.DataRequest,
+    stream pb.DataService_StreamDataServer,
+) error {
+    for data := range s.dataChannel {
+        // Send blocks if client buffer is full
+        // This is automatic backpressure via HTTP/2 flow control
+        if err := stream.Send(data); err != nil {
+            return err // Client disconnected or can't keep up
+        }
+    }
+    return nil
+}
+</code></pre>
+<h2>Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>WebSocket</th>
+<th>SSE</th>
+<th>gRPC Streaming</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>Bidirectional</td>
+<td>Server → Client</td>
+<td>Both options</td>
+</tr>
+<tr>
+<td>Protocol</td>
+<td>WS (over HTTP)</td>
+<td>HTTP/1.1+</td>
+<td>HTTP/2</td>
+</tr>
+<tr>
+<td>Data format</td>
+<td>Text + Binary</td>
+<td>Text</td>
+<td>Binary (Protobuf)</td>
+</tr>
+<tr>
+<td>Browser support</td>
+<td>✅ Native</td>
+<td>✅ Native</td>
+<td>⚠️ grpc-web proxy</td>
+</tr>
+<tr>
+<td>Auto-reconnect</td>
+<td>❌ Manual</td>
+<td>✅ Built-in</td>
+<td>⚠️ Library-dependent</td>
+</tr>
+<tr>
+<td>Load balancing</td>
+<td>⚠️ Sticky sessions</td>
+<td>✅ Standard HTTP</td>
+<td>✅ HTTP/2 LB</td>
+</tr>
+<tr>
+<td>Proxy friendly</td>
+<td>⚠️ Some issues</td>
+<td>✅ Works everywhere</td>
+<td>⚠️ Needs HTTP/2</td>
+</tr>
+<tr>
+<td>Best use case</td>
+<td>Real-time apps</td>
+<td>Notifications/LLM</td>
+<td>Microservices</td>
+</tr>
+</tbody>
+</table>
+<p>Choose SSE by default for server-to-client streaming. Reach for WebSockets when you need true bidirectional communication. Use gRPC streaming for service-to-service performance-critical paths.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

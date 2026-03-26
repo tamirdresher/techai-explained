@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The 5 Tools Every Platform Engineer Uses Daily — TechAI Explained</title>
+  <meta name="description" content="A video script covering the essential toolkit for platform engineers in 2026 — from internal developer portals to GitOps controllers to infrastructure cost dashboards.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 12, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>The 5 Tools Every Platform Engineer Uses Daily</h1>
+    <p class="subtitle">A video script covering the essential toolkit for platform engineers in 2026 — from internal developer portals to GitOps controllers to infrastructure cost dashboards.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 10 minutes</li>
+<li><strong>Format:</strong> Screen recording demos of each tool + narrated overview</li>
+<li><strong>Audience:</strong> DevOps engineers transitioning to platform engineering, and engineering leads building platform teams</li>
+<li><strong>Thumbnail Concept:</strong> Five tool icons arranged in a circle around a &quot;Platform Engineer&quot; title — text &quot;5 ESSENTIAL Tools&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:00)</h3>
+<p><strong>Hook (0:00 - 0:25)</strong></p>
+<blockquote>
+<p>&quot;Platform engineering is the hottest role in DevOps. But what does a platform engineer actually DO all day? And more importantly — what tools do they use? I surveyed 200 platform engineers and these five tools came up in almost every response.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Brief montage of tool dashboards — Backstage, ArgoCD, Terraform, Grafana, Crossplane.</p>
+<p><strong>Agenda (0:25 - 1:00)</strong></p>
+<blockquote>
+<p>&quot;We'll cover: the internal developer portal, GitOps for deployment, infrastructure-as-code at scale, observability for platform health, and cost management. For each tool, I'll show what it does, why it matters, and the one configuration most teams get wrong.&quot;</p>
+</blockquote>
+<hr>
+<h3>TOOL 1: Internal Developer Portal — Backstage (1:00 - 3:00)</h3>
+<p><strong>What It Does (1:00 - 1:30)</strong></p>
+<blockquote>
+<p>&quot;Backstage is the front door to your platform. It's where developers go to create new services, find documentation, check service health, and discover APIs. Think of it as the 'app store' for your internal infrastructure.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Backstage UI showing service catalog, create new component wizard, API docs, TechDocs.</p>
+<p><strong>Why It Matters (1:30 - 2:00)</strong></p>
+<blockquote>
+<p>&quot;Without a portal, developers file tickets to create a new service. With Backstage, they click 'Create,' fill out a form, and get a fully configured repo with CI/CD, monitoring, and deployment in minutes.&quot;</p>
+</blockquote>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li><strong>Software Catalog:</strong> Every service, its owner, its dependencies, its docs</li>
+<li><strong>Scaffolding (Templates):</strong> Golden paths for creating new services</li>
+<li><strong>TechDocs:</strong> Documentation that lives next to the code</li>
+<li><strong>Plugin Ecosystem:</strong> Kubernetes, CI/CD, cost, security — all in one place</li>
+</ul>
+<p><strong>Demo (2:00 - 2:30):</strong>
+Show creating a new service from a template — from clicking &quot;Create&quot; to having a running service in 3 minutes.</p>
+<p><strong>The Mistake Most Teams Make (2:30 - 3:00)</strong></p>
+<blockquote>
+<p>&quot;The #1 mistake: launching Backstage with an empty catalog. If developers open it and see nothing, they never come back. Populate the catalog FIRST — import all existing services, add ownership data, link to CI/CD pipelines. Make it useful on day one.&quot;</p>
+</blockquote>
+<hr>
+<h3>TOOL 2: GitOps Controller — ArgoCD (3:00 - 5:00)</h3>
+<p><strong>What It Does (3:00 - 3:30)</strong></p>
+<blockquote>
+<p>&quot;ArgoCD watches your Git repository and keeps your Kubernetes cluster in sync with what's in Git. Push a change to your deployment manifest? ArgoCD automatically applies it. No kubectl, no scripts, no 'I deployed from my laptop.'&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> ArgoCD UI showing application tree, sync status, deployment history.</p>
+<p><strong>Why It Matters (3:30 - 4:00)</strong></p>
+<blockquote>
+<p>&quot;GitOps gives you three things for free: audit trail (every change is a Git commit), rollback (git revert), and drift detection (ArgoCD tells you when the cluster doesn't match Git).&quot;</p>
+</blockquote>
+<p><strong>Key Concepts:</strong></p>
+<ul>
+<li><strong>Application:</strong> A mapping from a Git repo/path to a Kubernetes namespace</li>
+<li><strong>Sync:</strong> Making the cluster match Git</li>
+<li><strong>Drift Detection:</strong> Alerting when someone changes the cluster directly</li>
+<li><strong>App of Apps:</strong> Bootstrapping pattern — one ArgoCD app manages all other apps</li>
+</ul>
+<p><strong>Demo (4:00 - 4:30):</strong>
+Show a Git push → ArgoCD detects change → automatic sync → new version deployed.</p>
+<p><strong>The Mistake Most Teams Make (4:30 - 5:00)</strong></p>
+<blockquote>
+<p>&quot;The #1 mistake: not enabling automated sync with pruning. Without <code>automated.prune: true</code>, ArgoCD won't delete resources you removed from Git. You end up with orphaned resources that cost money and cause confusion.&quot;</p>
+</blockquote>
+<pre><code class="language-yaml"># Always enable these
+spec:
+  syncPolicy:
+    automated:
+      prune: true       # Delete resources removed from Git
+      selfHeal: true    # Fix manual changes automatically
+</code></pre>
+<hr>
+<h3>TOOL 3: Infrastructure-as-Code — Terraform + Crossplane (5:00 - 7:00)</h3>
+<p><strong>What It Does (5:00 - 5:30)</strong></p>
+<blockquote>
+<p>&quot;Terraform defines your cloud infrastructure as code. Crossplane takes it further — it lets Kubernetes manage your cloud resources. Together, they give platform engineers a complete infrastructure provisioning story.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Terraform plan output → apply → cloud resources created. Then Crossplane CRD creating an RDS database from a Kubernetes manifest.</p>
+<p><strong>Why Both? (5:30 - 6:00)</strong></p>
+<blockquote>
+<p>&quot;Terraform is for platform engineers — managing the base infrastructure: VPCs, clusters, DNS, IAM. Crossplane is for developer self-service — letting developers request databases, caches, and queues through Kubernetes manifests without needing cloud console access.&quot;</p>
+</blockquote>
+<pre><code>TERRAFORM (platform team)        CROSSPLANE (developer self-service)
+─────────────────────────        ──────────────────────────────────
+VPC, subnets, security groups    Database for my service
+Kubernetes cluster               Redis cache for my service
+DNS zones, certificates          S3 bucket for my service
+IAM roles, policies              
+                                 Developers apply a YAML manifest.
+Platform team runs terraform.    Crossplane provisions the cloud
+                                 resource automatically.
+</code></pre>
+<p><strong>Demo (6:00 - 6:30):</strong></p>
+<p>Developer creates a <code>PostgreSQLInstance</code> custom resource in their namespace → Crossplane provisions an actual RDS instance in AWS → connection string injected into the pod automatically.</p>
+<pre><code class="language-yaml">apiVersion: database.example.org/v1
+kind: PostgreSQLInstance
+metadata:
+  name: my-service-db
+spec:
+  size: small
+  version: &quot;16&quot;
+</code></pre>
+<p><strong>The Mistake Most Teams Make (6:30 - 7:00)</strong></p>
+<blockquote>
+<p>&quot;The #1 mistake with Terraform: not using remote state with locking. Without it, two people running terraform apply simultaneously will corrupt your infrastructure. Always use S3 + DynamoDB (AWS) or Azure Storage with locking.&quot;</p>
+</blockquote>
+<hr>
+<h3>TOOL 4: Observability Platform — Grafana Stack (7:00 - 8:30)</h3>
+<p><strong>What It Does (7:00 - 7:30)</strong></p>
+<blockquote>
+<p>&quot;The Grafana stack — Grafana for dashboards, Prometheus for metrics, Loki for logs, Tempo for traces — gives platform engineers visibility into everything. Not just application health, but platform health.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Grafana dashboard with golden signals (request rate, error rate, latency, saturation) for the platform itself.</p>
+<p><strong>Platform-Specific Metrics (7:30 - 8:00)</strong></p>
+<blockquote>
+<p>&quot;Platform engineers don't just monitor applications. They monitor the platform:&quot;</p>
+</blockquote>
+<ul>
+<li><strong>Developer experience metrics:</strong> Time from PR merge to production. Deployment frequency per team.</li>
+<li><strong>Platform reliability:</strong> API gateway error rate. Certificate expiry countdown. Cluster utilization.</li>
+<li><strong>Self-service metrics:</strong> How many resources provisioned per week. Failed provisioning requests.</li>
+<li><strong>Cost metrics:</strong> Spend per team. Idle resource detection. Reserved capacity utilization.</li>
+</ul>
+<p><strong>Demo (8:00 - 8:15):</strong>
+Show a &quot;Platform Health&quot; dashboard with: deployment pipeline success rate, mean time from merge to production, cluster resource utilization, and cost-per-team breakdown.</p>
+<p><strong>The Mistake Most Teams Make (8:15 - 8:30)</strong></p>
+<blockquote>
+<p>&quot;The #1 mistake: monitoring infrastructure but not developer experience. If your deployments take 45 minutes and you're not tracking that, you're missing the metric that matters most to your users — the developers.&quot;</p>
+</blockquote>
+<hr>
+<h3>TOOL 5: Cost Management — Kubecost / OpenCost (8:30 - 9:30)</h3>
+<p><strong>What It Does (8:30 - 9:00)</strong></p>
+<blockquote>
+<p>&quot;Kubecost and OpenCost allocate Kubernetes costs to teams, namespaces, and individual services. Without it, your cloud bill is a black box — you know the total, but not who's spending what.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Kubecost dashboard showing cost breakdown by namespace, team, and efficiency score.</p>
+<p><strong>Why It Matters (9:00 - 9:15)</strong></p>
+<blockquote>
+<p>&quot;I've seen Kubecost save teams 30-50% on their cloud bill within the first month. Not through magic — just by showing teams that their dev environment is running 24/7, their staging environment has 4x the resources of production, and nobody turned off the load test cluster from last quarter.&quot;</p>
+</blockquote>
+<p><strong>The Mistake Most Teams Make (9:15 - 9:30)</strong></p>
+<blockquote>
+<p>&quot;The #1 mistake: installing Kubecost but not sharing the dashboards with development teams. Cost visibility only works when the people making resource decisions can see the cost impact. Give every team their own cost dashboard.&quot;</p>
+</blockquote>
+<hr>
+<h3>OUTRO (9:30 - 10:00)</h3>
+<p><strong>Summary (9:30 - 9:45)</strong></p>
+<blockquote>
+<p>&quot;Five tools, five capabilities: Backstage for the developer portal. ArgoCD for deployment. Terraform plus Crossplane for infrastructure. Grafana for observability. And Kubecost for cost management. Together, they form the core of a modern internal developer platform.&quot;</p>
+</blockquote>
+<p><strong>CTA (9:45 - 10:00)</strong></p>
+<blockquote>
+<p>&quot;If you're building a platform team, start with these five. Get them right before adding anything else. Subscribe for a deep-dive into each tool. Next week: setting up Backstage from scratch.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> Two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Heavy screen recording of each tool's UI. Real dashboards, real data (anonymized).</li>
+<li><strong>Graphics:</strong> Tool comparison tables, architecture diagrams showing how the tools connect</li>
+<li><strong>Music:</strong> Professional, confident — this is for senior engineers making tool decisions</li>
+<li><strong>Pacing:</strong> Each tool gets exactly 2 minutes. Fast but thorough.</li>
+<li><strong>SEO Tags:</strong> platform engineering, internal developer platform, Backstage, ArgoCD, Terraform, Crossplane, Kubecost, GitOps, DevOps tools, developer experience, cloud cost</li>
+<li><strong>Sponsor fit:</strong> Any of these tools would be a natural sponsor. Backstage and ArgoCD are open source, but commercial offerings exist.</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

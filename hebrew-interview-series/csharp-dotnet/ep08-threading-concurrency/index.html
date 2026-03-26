@@ -1,0 +1,198 @@
+<h1>שיעור 8: Threading ו-Concurrency — Thread, Task, CancellationToken</h1>
+<p><strong>סדרת הכנה לראיונות הייטק | מסלול C# &amp; .NET | TechAI Explained</strong></p>
+<hr>
+<h2>מבוא</h2>
+<p>ביצועים בקנה מידה גדול דורשים הבנה של concurrency.<br>
+שאלות על Thread safety, race conditions ו-lock הן שאלות ראיון ברמה גבוהה שמפרידות בין מפתחים.</p>
+<hr>
+<h2>Thread vs Task</h2>
+<pre><code class="language-csharp">// Thread — ניהול ישיר (נדיר היום)
+var thread = new Thread(() =&gt; {
+    Console.WriteLine($&quot;Thread ID: {Thread.CurrentThread.ManagedThreadId}&quot;);
+});
+thread.Start();
+thread.Join(); // המתנה לסיום
+
+// Task — ניהול על Thread Pool (מומלץ)
+var task = Task.Run(() =&gt; {
+    Console.WriteLine(&quot;Running on Thread Pool&quot;);
+});
+await task;
+</code></pre>
+<h3>למה Task עדיף?</h3>
+<ul>
+<li><strong>Thread Pool:</strong> שימוש חוזר ב-Threads קיימים</li>
+<li><strong>async/await:</strong> תמיכה מלאה</li>
+<li><strong>Cancellation:</strong> תמיכה ב-CancellationToken</li>
+<li><strong>Exception handling:</strong> פשוט יותר</li>
+</ul>
+<hr>
+<h2>Race Condition — הבאג הכי מסוכן</h2>
+<pre><code class="language-csharp">// ❌ Race Condition!
+private int _counter = 0;
+
+public void IncrementFromMultipleThreads()
+{
+    Parallel.For(0, 1000, _ =&gt; {
+        _counter++; // לא thread-safe!
+        // Read + Increment + Write — שלושה צעדים לא אטומיים
+    });
+    Console.WriteLine(_counter); // לא יהיה 1000!
+}
+</code></pre>
+<hr>
+<h2>lock — הפתרון הבסיסי</h2>
+<pre><code class="language-csharp">private int _counter = 0;
+private readonly object _lockObject = new object(); // dedicated lock object
+
+public void SafeIncrement()
+{
+    Parallel.For(0, 1000, _ =&gt; {
+        lock (_lockObject) // רק thread אחד בכל פעם
+        {
+            _counter++;
+        }
+    });
+    Console.WriteLine(_counter); // 1000 ✅
+}
+</code></pre>
+<hr>
+<h2>Interlocked — אטומי ומהיר</h2>
+<pre><code class="language-csharp">private int _counter = 0;
+
+public void AtomicIncrement()
+{
+    Parallel.For(0, 1000, _ =&gt; {
+        Interlocked.Increment(ref _counter); // אטומי, ללא lock
+    });
+    Console.WriteLine(_counter); // 1000 ✅
+}
+
+// פעולות Interlocked
+Interlocked.Add(ref _total, 10);
+int old = Interlocked.Exchange(ref _value, 42);
+int result = Interlocked.CompareExchange(ref _value, newValue, expectedValue);
+</code></pre>
+<hr>
+<h2>SemaphoreSlim — הגבלת concurrency</h2>
+<pre><code class="language-csharp">private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(3); // מקסימום 3 בו-זמנית
+
+public async Task ProcessWithLimitAsync(IEnumerable&lt;int&gt; items)
+{
+    var tasks = items.Select(async item =&gt; {
+        await _semaphore.WaitAsync();
+        try
+        {
+            await ProcessItemAsync(item);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    });
+    
+    await Task.WhenAll(tasks);
+}
+</code></pre>
+<hr>
+<h2>CancellationToken — ביטול מנוהל</h2>
+<pre><code class="language-csharp">public async Task LongRunningOperationAsync(CancellationToken ct)
+{
+    for (int i = 0; i &lt; 100; i++)
+    {
+        ct.ThrowIfCancellationRequested(); // בדיקה ידנית
+        
+        await Task.Delay(100, ct); // ביטול אוטומטי ב-Delay
+        
+        Console.WriteLine($&quot;Step {i}&quot;);
+    }
+}
+
+// שימוש עם timeout
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+// שימוש עם ביטול ידני
+using var cts = new CancellationTokenSource();
+cts.Cancel(); // ביטול מיידי
+
+// חיבור של שני tokens
+using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct1, ct2);
+</code></pre>
+<hr>
+<h2>Parallel.ForEach — עיבוד מקבילי</h2>
+<pre><code class="language-csharp">var items = Enumerable.Range(1, 100).ToList();
+
+// עיבוד מקבילי
+Parallel.ForEach(items, new ParallelOptions { MaxDegreeOfParallelism = 4 },
+    item =&gt; {
+        ProcessItem(item);
+    });
+
+// async version — Channel או Parallel.ForEachAsync (.NET 6+)
+await Parallel.ForEachAsync(items, async (item, ct) =&gt; {
+    await ProcessItemAsync(item, ct);
+});
+</code></pre>
+<hr>
+<h2>volatile — שמירה על ראיות שדות</h2>
+<pre><code class="language-csharp">private volatile bool _isRunning = true;
+
+public void Worker()
+{
+    while (_isRunning) // thread אחר יכול לשנות
+    {
+        DoWork();
+    }
+}
+
+public void Stop()
+{
+    _isRunning = false; // guarantee — ייראה מיד לכל threads
+}
+</code></pre>
+<hr>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: &quot;מה הוא Race Condition?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> מצב שבו תוצאת תוכנה תלויה בסדר הביצוע של threads. קורה כשמרובה threads ניגשים לנתון משותף ולפחות אחד כותב, ללא synchronization.</p>
+<h3>שאלה 2: &quot;מה ההבדל בין lock לבין SemaphoreSlim?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> lock מאפשר thread אחד בלבד. SemaphoreSlim מאפשר <strong>מספר מוגדר</strong> של threads בו-זמנית. SemaphoreSlim תומך גם ב-async (<code>WaitAsync</code>).</p>
+<h3>שאלה 3: &quot;מה הוא Deadlock ואיך מונעים?&quot;</h3>
+<p><strong>תשובה נכונה:</strong> שני threads מחכים אחד לשני לנצח. מניעה: תמיד לנעול resources בסדר קבוע, שימוש ב-timeout, הימנעות מנעילה מקוננת.</p>
+<hr>
+<h2>סיכום</h2>
+<table>
+<thead>
+<tr>
+<th>כלי</th>
+<th>שימוש</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lock</code></td>
+<td>critical section בסיסי</td>
+</tr>
+<tr>
+<td><code>Interlocked</code></td>
+<td>פעולות אטומיות על primitives</td>
+</tr>
+<tr>
+<td><code>SemaphoreSlim</code></td>
+<td>הגבלת concurrency, async-friendly</td>
+</tr>
+<tr>
+<td><code>CancellationToken</code></td>
+<td>ביטול מנוהל</td>
+</tr>
+<tr>
+<td><code>volatile</code></td>
+<td>ראיה מיידית של שינויים</td>
+</tr>
+<tr>
+<td><code>Parallel.ForEach</code></td>
+<td>עיבוד מקבילי</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>TechAI Explained | מסלול C# &amp; .NET | שיעור 8 מתוך 10</em></p>

@@ -1,0 +1,173 @@
+<h1>Transformers ו-LLMs — Attention, BERT ו-GPT</h1>
+<p><strong>מאת:</strong> TechAI Explained Team</p>
+<h2>מה נלמד בפרק הזה?</h2>
+<ul>
+<li>מנגנון ה-Attention וכיצד הוא מאפשר ל-Transformers להבין הקשר</li>
+<li>ההבדל בין ארכיטקטורת BERT לGPT ומתי כל אחד מתאים</li>
+<li>כיצד מאמנים ומכווננים LLMs (Pre-training, Fine-tuning)</li>
+</ul>
+<h2>שאלות ראיון נפוצות</h2>
+<h3>שאלה 1: מה הבעיה שה-Transformer פתר?</h3>
+<p><strong>תשובה:</strong>
+לפני Transformers, ה-state of the art ל-NLP היה RNN/LSTM. לאלה שתי בעיות מרכזיות:</p>
+<p><strong>בעיה 1 — Sequential Processing:</strong>
+RNN מעבד טוקנים ברצף — כדי לעבד טוקן מספר 100, חייב לעבד קודם 1-99. זה מונע <strong>parallelism</strong> ומאט מאוד את האימון.</p>
+<p><strong>בעיה 2 — Long-Range Dependencies:</strong>
+לאורך רצפים ארוכים, RNN &quot;שוכח&quot; מידע מוקדם. גם LSTM עם gates מגיע לגבולות.</p>
+<p><strong>הפתרון — Self-Attention:</strong>
+Transformer (הוצג ב-&quot;Attention is All You Need&quot;, 2017) מאפשר לכל טוקן לשים &quot;תשומת לב&quot; לכל טוקן אחר בו-זמנית, ללא ממגבלת רצף. כלומר:</p>
+<ul>
+<li><strong>Parallelizable לחלוטין</strong> — כל הטוקנים מעובדים בו-זמנית</li>
+<li><strong>Direct access</strong> לכל חלק ברצף, ללא &quot;שכחה&quot;</li>
+</ul>
+<p>זה מה שאיפשר לאמן מודלים ענקיים על כמויות נתונים עצומות.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Transformer פתר את בעיית ה-sequential processing וה-long-range dependencies</li>
+<li>הבסיס לכל ה-LLMs המודרניים: GPT, BERT, T5, LLaMA</li>
+<li>&quot;Attention is All You Need&quot; — נחשב אחד ממאמרי ה-AI החשובים בהיסטוריה</li>
+</ul>
+<hr>
+<h3>שאלה 2: כיצד מנגנון Attention עובד?</h3>
+<p><strong>תשובה:</strong>
+Self-Attention מאפשר לכל טוקן ל&quot;שאול שאלה&quot; אצל כל טוקן אחר ברצף ולשקול את תשובתם.</p>
+<p><strong>Query, Key, Value:</strong>
+לכל טוקן מחשבים שלושה וקטורים:</p>
+<ul>
+<li><strong>Q (Query):</strong> &quot;מה אני מחפש?&quot;</li>
+<li><strong>K (Key):</strong> &quot;מה יש לי להציע?&quot;</li>
+<li><strong>V (Value):</strong> &quot;מה המידע בפועל שלי?&quot;</li>
+</ul>
+<p><strong>החישוב:</strong></p>
+<ol>
+<li>כל Query ×  כל Key → Attention Score (כמה רלוונטי כל טוקן)</li>
+<li>Softmax על ה-scores → Attention Weights (סכום=1)</li>
+<li>Weighted sum של Values → Output vector לכל טוקן</li>
+</ol>
+<p><code>Attention(Q,K,V) = softmax(QK^T / √d_k) × V</code></p>
+<p><strong>Multi-Head Attention:</strong>
+מריצים מספר Attention &quot;heads&quot; במקביל, כל אחד לומד patterns שונים (תחבירי, סמנטי, קו-רפרנס וכו'). מאחדים בסוף.</p>
+<p><strong>Positional Encoding:</strong>
+כיוון ש-Transformer מעבד את כל הטוקנים בו-זמנית, אין לו מושג של סדר. Positional Encoding מוסיף מידע על מיקום כל טוקן לvectors שלו.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Attention = &quot;ציון רלוונטיות&quot; בין כל זוג טוקנים</li>
+<li>Multi-head = לומד patterns מרובים בו-זמנית</li>
+<li>Complexity: O(n²) לאורך רצף — בעיה לרצפים ארוכים מאוד</li>
+</ul>
+<hr>
+<h3>שאלה 3: מה ההבדל בין BERT ל-GPT?</h3>
+<p><strong>תשובה:</strong>
+שניהם מבוססים Transformer אך עם ארכיטקטורות שונות שמתאימות ל-use cases שונים:</p>
+<p><strong>BERT (Bidirectional Encoder Representations from Transformers):</strong></p>
+<ul>
+<li><strong>ארכיטקטורה:</strong> Encoder-only</li>
+<li><strong>קריאה:</strong> דו-כיוונית — כל טוקן &quot;רואה&quot; גם מה לפניו וגם מה אחריו</li>
+<li><strong>Pre-training task:</strong> Masked Language Modeling (MLM) — הסתרת 15% מהטוקנים וחיזויים, + Next Sentence Prediction</li>
+<li><strong>חוזק:</strong> הבנת הקשר (understanding, NLU) — classification, NER, Question Answering</li>
+<li><strong>חולשה:</strong> לא טוב ליצירת טקסט (לא auto-regressive)</li>
+</ul>
+<p><strong>GPT (Generative Pre-trained Transformer):</strong></p>
+<ul>
+<li><strong>ארכיטקטורה:</strong> Decoder-only</li>
+<li><strong>קריאה:</strong> חד-כיוונית (causal) — כל טוקן רואה רק מה לפניו (לא מה אחריו)</li>
+<li><strong>Pre-training task:</strong> Next Token Prediction — חיזוי הטוקן הבא</li>
+<li><strong>חוזק:</strong> יצירת טקסט (generation, NLG) — text completion, chatbots, code generation</li>
+<li><strong>חולשה:</strong> לא אופטימלי ל-classification (יכול לעשות עם prompt)</li>
+</ul>
+<p><strong>T5 (Text-to-Text Transfer Transformer):</strong>
+Encoder-Decoder — מתאים ל-seq2seq tasks: תרגום, סיכום, Q&amp;A.</p>
+<p><strong>בפועל:</strong></p>
+<ul>
+<li>BERT: סיווג sentiment, NER, QA extractive</li>
+<li>GPT: כתיבת טקסט, code completion, conversational AI</li>
+<li>LLaMA, Mistral, Claude, Gemini: GPT-style (Decoder-only) בגדלים ויכולות שונות</li>
+</ul>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>BERT = Encoder, GPT = Decoder — משפיע על כיוון ה-attention</li>
+<li>BERT טוב להבנה, GPT ליצירה</li>
+<li>מודלים מודרניים (GPT-4, Claude) = Decoder-only בקנה מידה עצום</li>
+</ul>
+<hr>
+<h3>שאלה 4: מה זה Fine-tuning ו-PEFT?</h3>
+<p><strong>תשובה:</strong>
+<strong>Pre-training:</strong>
+LLM מאומן על כמות עצומה של טקסט אינטרנטי (trillions של tokens). הוא לומד ייצוג כללי של שפה ועולם. יקר מאוד (מיליוני דולרים).</p>
+<p><strong>Fine-tuning:</strong>
+לקחת מודל pre-trained ולאמן אותו על נתוני domain ספציפי לשיפור ביצועים. מעדכן את כל/רוב הפרמטרים של המודל.</p>
+<ul>
+<li>יקר לmodels גדולים (עדכון מיליארדי פרמטרים)</li>
+<li>דורש כמות סבירה של נתוני domain</li>
+</ul>
+<p><strong>PEFT (Parameter-Efficient Fine-Tuning):</strong>
+שיטות לכוונון שמעדכנות רק <strong>חלק קטן</strong> מהפרמטרים:</p>
+<ol>
+<li>
+<p><strong>LoRA (Low-Rank Adaptation):</strong></p>
+<ul>
+<li>מוסיף מטריצות קטנות בנות דרגה נמוכה (low-rank) ל-attention layers</li>
+<li>מאמן רק את המטריצות החדשות (~0.1% מהפרמטרים)</li>
+<li>ביצועים קרובים ל-full fine-tuning!</li>
+<li>הנפוץ ביותר כיום</li>
+</ul>
+</li>
+<li>
+<p><strong>Prefix Tuning:</strong></p>
+<ul>
+<li>מוסיף tokens &quot;virtual&quot; לתחילת כל שכבה</li>
+<li>המודל המקורי קפוא לחלוטין</li>
+</ul>
+</li>
+<li>
+<p><strong>Adapter Layers:</strong></p>
+<ul>
+<li>מוסיף שכבות קטנות בין שכבות ה-Transformer</li>
+<li>קפוא את שכבות המקורי</li>
+</ul>
+</li>
+</ol>
+<p><strong>RLHF (Reinforcement Learning from Human Feedback):</strong>
+שלב נוסף לאחר fine-tuning — מאמנים reward model על העדפות אנושיות, ואז מכווננים עם RL לעמוד בציפיות אנושיות. זה מה שהפך ChatGPT ממודל &quot;לנבא מילה הבאה&quot; ל&quot;עוזר שימושי&quot;.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>LoRA = הדרך הנפוצה לcustomize LLMs בעלות נמוכה</li>
+<li>RLHF קריטי ל-alignment — ללמד מודל להיות helpful ו-harmless</li>
+<li>Fine-tuning ≠ training from scratch — זה leverage של מה שכבר נלמד</li>
+</ul>
+<hr>
+<h3>שאלה 5: מהם ה-challenges העיקריים של LLMs?</h3>
+<p><strong>תשובה:</strong>
+<strong>1. Hallucination (הזיה):</strong>
+LLMs מייצרים טקסט עקבי ובטוח גם כאשר הם &quot;ממציאים&quot; עובדות שגויות. אין להם מנגנון מובנה לאמת עובדות.
+פתרונות: RAG (Retrieval Augmented Generation), grounding to sources, uncertainty quantification.</p>
+<p><strong>2. Context Window:</strong>
+מודלים מוגבלים בכמות הטוקנים שיכולים &quot;לראות&quot; בו-זמנית. GPT-4 = ~128K tokens, Claude 3 = 200K. קובץ ארוך מאוד לא יכנס ל-context.
+פתרון: hierarchical summarization, chunking strategies, RAG.</p>
+<p><strong>3. Knowledge Cutoff:</strong>
+מידע המודל מוגבל לתאריך סיום האימון. לא יודע על אירועים חדשים.
+פתרון: RAG עם מקורות עדכניים, tool use לחיפוש בזמן אמת.</p>
+<p><strong>4. Computational Cost:</strong>
+inference של LLMs גדולים דורש GPU חזק ויקר. latency יכול להיות גבוה.
+פתרון: quantization (FP16, INT8, INT4), distillation, speculative decoding.</p>
+<p><strong>5. Bias ו-Safety:</strong>
+מודלים לומדים biases מנתוני האינטרנט. עשויים לייצר תוכן מזיק אם לא מאומנים כראוי.
+פתרון: RLHF, Constitutional AI, safety classifiers.</p>
+<p><strong>6. Prompt Sensitivity:</strong>
+שינוי קטן בפרומפט יכול לשנות דרמטית את הפלט.
+פתרון: prompt engineering, structured outputs, few-shot examples.</p>
+<p><strong>נקודות מפתח:</strong></p>
+<ul>
+<li>Hallucination היא הבעיה המרכזית ל-production deployments</li>
+<li>RAG פותרת כמה בעיות: knowledge cutoff, hallucination, relevance</li>
+<li>RLHF לא פתרון מושלם — יש &quot;alignment tax&quot; על ביצועים</li>
+</ul>
+<h2>סיכום</h2>
+<p>Transformers ו-LLMs מייצגים את הגל הנוכחי של מהפכת ה-AI. הבנת Attention Mechanism, ההבדל בין ארכיטקטורות Encoder/Decoder, ו-fine-tuning approaches היא חיונית לכל ראיון AI/ML. בפרק הבא נחפש כיצד RAG מפתרת את בעיית ה-knowledge cutoff וה-hallucination.</p>
+<h2>מקורות להמשך לימוד</h2>
+<ul>
+<li>Attention is All You Need — Vaswani et al. (2017)</li>
+<li>The Illustrated Transformer — Jay Alammar</li>
+<li>Hugging Face NLP Course</li>
+<li>Sebastian Raschka — LLMs from Scratch</li>
+</ul>

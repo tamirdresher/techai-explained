@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event-Driven Architecture with Azure Service Bus and .NET — TechAI Explained</title>
+  <meta name="description" content="A hands-on guide to building event-driven systems with Azure Service Bus — covering queues, topics, dead-letter handling, and the patterns that keep production systems reliable.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Azure</span>
+      <time>March 11, 2026</time>
+      <span class="read-time">13 min read</span>
+    </div>
+    <h1>Event-Driven Architecture with Azure Service Bus and .NET</h1>
+    <p class="subtitle">A hands-on guide to building event-driven systems with Azure Service Bus — covering queues, topics, dead-letter handling, and the patterns that keep production systems reliable.</p>
+  </header>
+  <div class="article-body">
+    <p>Event-driven architecture decouples services so they communicate through events instead of direct calls. When a user places an order, the order service publishes an <code>OrderPlaced</code> event — and every service that cares (inventory, notifications, analytics) reacts independently. No one waits. No one blocks.</p>
+<p>Azure Service Bus is the backbone for these systems in the Microsoft ecosystem. This guide shows you how to build one properly — with dead-letter handling, retry policies, and the patterns that survive production.</p>
+<h2>Why Events Instead of API Calls?</h2>
+<div class="diagram-box">
+SYNCHRONOUS (API Calls)          ASYNCHRONOUS (Events)
+───────────────────────          ─────────────────────
+<p>Order Service                    Order Service
+│                                │
+├── POST /inventory/reserve      ├── Publish: OrderPlaced
+│   (waits 200ms)                │   (fire and forget)
+│                                │
+├── POST /email/send             │
+│   (waits 150ms)                │
+│                                │
+└── POST /analytics/track   ┌────┴────┐────────┐
+(waits 100ms)           ▼         ▼        ▼
+Inventory  Email   Analytics
+Total: 450ms + coupling      (subscribe) (sub)   (sub)
+If email is down → order<br>
+fails!                       Total: ~5ms (publish only)
+If email is down → order
+still succeeds!</p>
+</div>
+<h2>Azure Service Bus Concepts</h2>
+<p>Before writing code, understand the two messaging patterns:</p>
+<h3>Queues: Point-to-Point</h3>
+<p>One sender, one receiver. Each message is processed by exactly one consumer.</p>
+<pre><code>Producer ──► [  Queue  ] ──► Consumer
+              msg msg msg
+              (FIFO order)
+</code></pre>
+<p>Use for: background job processing, command execution, work distribution.</p>
+<h3>Topics &amp; Subscriptions: Publish-Subscribe</h3>
+<p>One publisher, many subscribers. Each subscriber gets its own copy of every message.</p>
+<pre><code>Publisher ──► [ Topic ]
+                 │
+         ┌───────┼───────┐
+         ▼       ▼       ▼
+      [Sub A] [Sub B] [Sub C]
+      Email   Inventory Analytics
+      Service Service  Service
+</code></pre>
+<p>Use for: event broadcasting, fan-out patterns, decoupling services.</p>
+<h2>Setting Up Azure Service Bus</h2>
+<h3>Create the Infrastructure</h3>
+<pre><code class="language-bash"># Create resource group and namespace
+az group create --name rg-events --location eastus
+
+az servicebus namespace create \
+  --name sb-myapp \
+  --resource-group rg-events \
+  --sku Standard
+
+# Create a topic with subscriptions
+az servicebus topic create \
+  --namespace-name sb-myapp \
+  --resource-group rg-events \
+  --name order-events
+
+az servicebus topic subscription create \
+  --namespace-name sb-myapp \
+  --resource-group rg-events \
+  --topic-name order-events \
+  --name inventory-sub
+
+az servicebus topic subscription create \
+  --namespace-name sb-myapp \
+  --resource-group rg-events \
+  --topic-name order-events \
+  --name notification-sub
+</code></pre>
+<h3>.NET Project Setup</h3>
+<pre><code class="language-bash">dotnet new worker -n OrderProcessor
+cd OrderProcessor
+dotnet add package Azure.Messaging.ServiceBus
+dotnet add package Microsoft.Extensions.Azure
+</code></pre>
+<h2>Publishing Events</h2>
+<h3>Define Your Events</h3>
+<pre><code class="language-csharp">// Events/OrderPlaced.cs
+public record OrderPlaced
+{
+    public required Guid OrderId { get; init; }
+    public required Guid CustomerId { get; init; }
+    public required List&lt;OrderItem&gt; Items { get; init; }
+    public required decimal TotalAmount { get; init; }
+    public required DateTimeOffset OccurredAt { get; init; }
+}
+
+public record OrderItem
+{
+    public required string ProductId { get; init; }
+    public required int Quantity { get; init; }
+    public required decimal UnitPrice { get; init; }
+}
+</code></pre>
+<h3>Publish with Retry and Correlation</h3>
+<pre><code class="language-csharp">// Services/EventPublisher.cs
+public class EventPublisher : IAsyncDisposable
+{
+    private readonly ServiceBusSender _sender;
+
+    public EventPublisher(ServiceBusClient client, string topicName)
+    {
+        _sender = client.CreateSender(topicName);
+    }
+
+    public async Task PublishAsync&lt;T&gt;(
+        T @event,
+        string correlationId,
+        CancellationToken ct = default) where T : class
+    {
+        var message = new ServiceBusMessage(
+            BinaryData.FromObjectAsJson(@event))
+        {
+            ContentType = &quot;application/json&quot;,
+            Subject = typeof(T).Name,
+            CorrelationId = correlationId,
+            MessageId = Guid.NewGuid().ToString(),
+            ApplicationProperties =
+            {
+                [&quot;EventType&quot;] = typeof(T).Name,
+                [&quot;Timestamp&quot;] = DateTimeOffset.UtcNow.ToString(&quot;O&quot;),
+            }
+        };
+
+        await _sender.SendMessageAsync(message, ct);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _sender.DisposeAsync();
+    }
+}
+</code></pre>
+<h3>Usage in Your API</h3>
+<pre><code class="language-csharp">app.MapPost(&quot;/api/orders&quot;, async (
+    CreateOrderRequest request,
+    OrderService orderService,
+    EventPublisher events) =&gt;
+{
+    var order = await orderService.CreateAsync(request);
+
+    await events.PublishAsync(new OrderPlaced
+    {
+        OrderId = order.Id,
+        CustomerId = request.CustomerId,
+        Items = order.Items,
+        TotalAmount = order.Total,
+        OccurredAt = DateTimeOffset.UtcNow,
+    }, correlationId: order.Id.ToString());
+
+    return Results.Created($&quot;/api/orders/{order.Id}&quot;, order);
+});
+</code></pre>
+<h2>Consuming Events</h2>
+<h3>The Processor Pattern</h3>
+<pre><code class="language-csharp">// Workers/InventoryWorker.cs
+public class InventoryWorker : BackgroundService
+{
+    private readonly ServiceBusProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger&lt;InventoryWorker&gt; _logger;
+
+    public InventoryWorker(
+        ServiceBusClient client,
+        IServiceScopeFactory scopeFactory,
+        ILogger&lt;InventoryWorker&gt; logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+        _processor = client.CreateProcessor(
+            &quot;order-events&quot;,
+            &quot;inventory-sub&quot;,
+            new ServiceBusProcessorOptions
+            {
+                MaxConcurrentCalls = 10,
+                AutoCompleteMessages = false,
+                PrefetchCount = 20,
+            });
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        _processor.ProcessMessageAsync += HandleMessageAsync;
+        _processor.ProcessErrorAsync += HandleErrorAsync;
+
+        await _processor.StartProcessingAsync(ct);
+
+        // Keep running until cancellation
+        await Task.Delay(Timeout.Infinite, ct);
+    }
+
+    private async Task HandleMessageAsync(
+        ProcessMessageEventArgs args)
+    {
+        var eventType = args.Message.Subject;
+
+        using var scope = _scopeFactory.CreateScope();
+        var handler = scope.ServiceProvider
+            .GetRequiredService&lt;IEventHandler&gt;();
+
+        try
+        {
+            switch (eventType)
+            {
+                case nameof(OrderPlaced):
+                    var order = args.Message.Body
+                        .ToObjectFromJson&lt;OrderPlaced&gt;();
+                    await handler.HandleAsync(order);
+                    break;
+
+                default:
+                    _logger.LogWarning(
+                        &quot;Unknown event type: {EventType}&quot;, eventType);
+                    break;
+            }
+
+            await args.CompleteMessageAsync(args.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                &quot;Failed to process {EventType}, attempt {Count}&quot;,
+                eventType, args.Message.DeliveryCount);
+
+            if (args.Message.DeliveryCount &gt;= 3)
+            {
+                await args.DeadLetterMessageAsync(
+                    args.Message,
+                    &quot;MaxRetriesExceeded&quot;,
+                    ex.Message);
+            }
+            else
+            {
+                await args.AbandonMessageAsync(args.Message);
+            }
+        }
+    }
+
+    private Task HandleErrorAsync(ProcessErrorEventArgs args)
+    {
+        _logger.LogError(args.Exception,
+            &quot;Service Bus error: {Source}&quot;, args.ErrorSource);
+        return Task.CompletedTask;
+    }
+}
+</code></pre>
+<h2>Dead-Letter Queue: Your Safety Net</h2>
+<p>Messages that can't be processed go to the dead-letter queue (DLQ). This prevents poison messages from blocking your entire pipeline.</p>
+<div class="diagram-box">
+Normal Flow:
+Publisher ──► Topic ──► Subscription ──► Consumer ──► ✓ Complete
+<p>Failure Flow (after max retries):
+Publisher ──► Topic ──► Subscription ──► Consumer ──► ✗ Fail
+│
+▼ (after 3 retries)
+┌──────────────┐
+│ Dead-Letter   │
+│ Queue (DLQ)   │
+│               │
+│ Inspect, fix, │
+│ and replay    │
+└──────────────┘</p>
+</div>
+<h3>Monitoring the Dead-Letter Queue</h3>
+<pre><code class="language-csharp">// Services/DeadLetterMonitor.cs
+public class DeadLetterMonitor : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        var dlqReceiver = _client.CreateReceiver(
+            &quot;order-events&quot;,
+            &quot;inventory-sub&quot;,
+            new ServiceBusReceiverOptions
+            {
+                SubQueue = SubQueue.DeadLetter,
+            });
+
+        while (!ct.IsCancellationRequested)
+        {
+            var messages = await dlqReceiver
+                .ReceiveMessagesAsync(10, TimeSpan.FromSeconds(5), ct);
+
+            foreach (var msg in messages)
+            {
+                _logger.LogWarning(
+                    &quot;DLQ message: {Subject}, Reason: {Reason}, Error: {Error}&quot;,
+                    msg.Subject,
+                    msg.DeadLetterReason,
+                    msg.DeadLetterErrorDescription);
+
+                // Option 1: Fix and re-publish to the main topic
+                // Option 2: Store for manual inspection
+                // Option 3: Alert the ops team
+
+                await dlqReceiver.CompleteMessageAsync(msg, ct);
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(1), ct);
+        }
+    }
+}
+</code></pre>
+<h2>Idempotency: Process Once, Even If Delivered Twice</h2>
+<p>Service Bus guarantees <strong>at-least-once</strong> delivery. Your handlers must be idempotent — processing the same message twice should produce the same result.</p>
+<pre><code class="language-csharp">public class IdempotentOrderHandler : IEventHandler
+{
+    private readonly IDistributedCache _cache;
+
+    public async Task HandleAsync(OrderPlaced @event)
+    {
+        var messageKey = $&quot;processed:{@event.OrderId}&quot;;
+
+        // Check if already processed
+        var existing = await _cache.GetStringAsync(messageKey);
+        if (existing != null)
+        {
+            _logger.LogInformation(
+                &quot;Order {OrderId} already processed, skipping&quot;,
+                @event.OrderId);
+            return;
+        }
+
+        // Process the event
+        await _inventoryService.ReserveItemsAsync(@event.Items);
+
+        // Mark as processed (with TTL)
+        await _cache.SetStringAsync(
+            messageKey,
+            &quot;true&quot;,
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
+            });
+    }
+}
+</code></pre>
+<h2>Subscription Filters</h2>
+<p>Not every subscriber needs every message. Use SQL filters to route specific events:</p>
+<pre><code class="language-csharp">// Only receive high-value orders
+await adminClient.CreateRuleAsync(
+    &quot;order-events&quot;,
+    &quot;high-value-sub&quot;,
+    new CreateRuleOptions
+    {
+        Name = &quot;HighValueFilter&quot;,
+        Filter = new SqlRuleFilter(&quot;TotalAmount &gt; 1000&quot;),
+    });
+
+// Only receive specific event types
+await adminClient.CreateRuleAsync(
+    &quot;order-events&quot;,
+    &quot;notification-sub&quot;,
+    new CreateRuleOptions
+    {
+        Name = &quot;OrderEventsOnly&quot;,
+        Filter = new SqlRuleFilter(
+            &quot;Subject IN ('OrderPlaced', 'OrderCancelled')&quot;),
+    });
+</code></pre>
+<h2>Production Checklist</h2>
+<h3>Message Design</h3>
+<ul>
+<li>[ ] Events are immutable facts (past tense: <code>OrderPlaced</code>, not <code>PlaceOrder</code>)</li>
+<li>[ ] Each event includes a correlation ID for tracing</li>
+<li>[ ] Schema versioning strategy defined (add fields, never remove)</li>
+<li>[ ] Message size under 256 KB (use claim-check pattern for large payloads)</li>
+</ul>
+<h3>Reliability</h3>
+<ul>
+<li>[ ] Dead-letter queue monitoring and alerting configured</li>
+<li>[ ] All handlers are idempotent</li>
+<li>[ ] Retry policy configured (exponential backoff)</li>
+<li>[ ] Circuit breaker on downstream dependencies</li>
+<li>[ ] Max delivery count set appropriately (default is 10)</li>
+</ul>
+<h3>Observability</h3>
+<ul>
+<li>[ ] Structured logging with correlation IDs</li>
+<li>[ ] Metrics: queue depth, processing rate, DLQ depth, latency</li>
+<li>[ ] Alerts on DLQ growth and processing failures</li>
+<li>[ ] Distributed tracing across publisher → Service Bus → consumer</li>
+</ul>
+<h3>Performance</h3>
+<ul>
+<li>[ ] <code>MaxConcurrentCalls</code> tuned for your workload</li>
+<li>[ ] <code>PrefetchCount</code> set to batch-optimize network calls</li>
+<li>[ ] Sessions enabled if message ordering is required</li>
+<li>[ ] Partitioning enabled for high-throughput scenarios</li>
+</ul>
+<h2>When NOT to Use Service Bus</h2>
+<ul>
+<li><strong>Simple fire-and-forget notifications</strong> → use Azure Event Grid (cheaper, simpler)</li>
+<li><strong>High-throughput event streaming</strong> → use Azure Event Hubs or Kafka (millions/sec)</li>
+<li><strong>Request-response patterns</strong> → use HTTP/gRPC (events are one-way by design)</li>
+<li><strong>Local development only</strong> → use an in-memory queue or RabbitMQ in Docker</li>
+</ul>
+<p>Choose Service Bus when you need <strong>reliable, transactional messaging</strong> with dead-letter support, sessions, and enterprise-grade SLAs.</p>
+<p><em>Published by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

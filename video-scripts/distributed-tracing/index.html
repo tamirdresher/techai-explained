@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distributed Tracing: Following a Request Across 12 Services — TechAI Explained</title>
+  <meta name="description" content="A video script demonstrating how distributed tracing works in production — trace propagation, span hierarchies, and using traces to debug real incidents across a microservice architecture.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 10, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>Distributed Tracing: Following a Request Across 12 Services</h1>
+    <p class="subtitle">A video script demonstrating how distributed tracing works in production — trace propagation, span hierarchies, and using traces to debug real incidents across a microservice architecture.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 9 minutes</li>
+<li><strong>Format:</strong> Animated trace diagrams + live Jaeger/Grafana Tempo demo + architecture walkthrough</li>
+<li><strong>Audience:</strong> Backend developers working with microservices who need to debug cross-service issues</li>
+<li><strong>Thumbnail Concept:</strong> A glowing line threading through 12 connected service boxes — text &quot;Follow ONE Request Through 12 Services&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:00)</h3>
+<p><strong>Hook (0:00 - 0:25)</strong></p>
+<blockquote>
+<p>&quot;A user clicks 'Place Order.' That single click triggers 12 services, 3 databases, 2 message queues, and an external payment API. When it fails, where do you look? Logs from 12 services? Good luck. Distributed tracing lets you follow that ONE request across every service it touches. Let me show you how.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Animated request entering the system, bouncing through 12 service boxes with a glowing trace line connecting them all.</p>
+<hr>
+<h3>SECTION 1: What Is a Distributed Trace? (1:00 - 2:30)</h3>
+<p><strong>Core concepts:</strong></p>
+<blockquote>
+<p>&quot;A trace is the complete journey of a single request. It's made up of spans — each span represents one operation in one service. Spans have parent-child relationships that form a tree.&quot;</p>
+</blockquote>
+<p><strong>Visual — trace waterfall:</strong></p>
+<pre><code>TRACE: Place Order (trace_id: abc123)
+│
+├─ api-gateway ──────────────────────────────── 450ms
+│  │
+│  ├─ auth-service: verify-token ──── 12ms
+│  │
+│  └─ order-service: create-order ─────────── 430ms
+│     │
+│     ├─ inventory: check-stock ────── 35ms
+│     │  └─ postgres: SELECT ──── 8ms
+│     │
+│     ├─ pricing: calculate-total ──── 22ms
+│     │  └─ redis: GET cache ──── 1ms
+│     │
+│     ├─ payment: charge ──────────── 285ms
+│     │  └─ stripe-api: POST ──── 280ms
+│     │
+│     ├─ notification: send-email ──── 45ms
+│     │  └─ sendgrid: POST ──── 40ms
+│     │
+│     └─ analytics: track-event ──── 5ms
+│        └─ kafka: produce ──── 2ms
+</code></pre>
+<p><strong>Key terms:</strong></p>
+<ul>
+<li><strong>Trace</strong> = the entire journey (one trace ID)</li>
+<li><strong>Span</strong> = one operation within one service</li>
+<li><strong>Context propagation</strong> = passing the trace ID between services</li>
+</ul>
+<hr>
+<h3>SECTION 2: How Context Propagation Works (2:30 - 4:00)</h3>
+<blockquote>
+<p>&quot;The magic of tracing is context propagation. When Service A calls Service B, it passes a special header — <code>traceparent</code> — that contains the trace ID and the current span ID. Service B creates a child span under that parent.&quot;</p>
+</blockquote>
+<p><strong>Visual — header propagation:</strong></p>
+<pre><code>Service A                    Service B
+─────────                    ─────────
+Creates span (id: span-1)
+                    HTTP Request ──►
+                    Headers:
+                    traceparent: 00-abc123-span1-01
+                                    │        │
+                                    │        └─ parent span
+                                    └─ trace ID
+
+                    Service B reads traceparent
+                    Creates child span (id: span-2, parent: span-1)
+                    ◄── HTTP Response
+</code></pre>
+<p><strong>The W3C Trace Context standard:</strong></p>
+<pre><code>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+             │   │                                │                 │
+             │   trace-id (128-bit)               parent-id        flags
+             version                              (64-bit)         (sampled)
+</code></pre>
+<blockquote>
+<p>&quot;This header travels with every HTTP call, message queue event, and gRPC call. Every service adds its own span to the trace. When you view the trace in Jaeger, you see the complete picture.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 3: Live Demo — Debugging a Slow Request (4:00 - 6:00)</h3>
+<blockquote>
+<p>&quot;Let me show you a real trace from a production-like system.&quot;</p>
+</blockquote>
+<p><strong>Demo walkthrough:</strong></p>
+<p><strong>Step 1:</strong> Open Jaeger UI, search for traces on the order service, filter by duration &gt; 2 seconds.</p>
+<p><strong>Step 2:</strong> Click on a slow trace — 3.2 seconds total.</p>
+<p><strong>Step 3:</strong> Walk through the waterfall:</p>
+<blockquote>
+<p>&quot;Look at this trace. The total request took 3.2 seconds. Let's find the bottleneck. API gateway — 5ms, fine. Auth service — 10ms, fine. Order service — it called inventory, pricing, payment, and notification. Inventory — 30ms. Pricing — 15ms. Payment — 2.8 SECONDS. There's our problem.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;Drill into the payment span. It called Stripe's API. The Stripe call took 2.8 seconds. Check the span attributes — retry count: 3. The first two attempts timed out, the third succeeded. Now we know: Stripe had a latency spike, our retry logic worked but made the overall request slow.&quot;</p>
+</blockquote>
+<p><strong>Step 4:</strong> Show how to set an alert for payment latency &gt; 1 second.</p>
+<hr>
+<h3>SECTION 4: Instrumenting Your Services (6:00 - 7:30)</h3>
+<p><strong>Auto-instrumentation:</strong></p>
+<blockquote>
+<p>&quot;Most frameworks have auto-instrumentation. In Node.js, one package captures HTTP, database, and cache spans automatically. In .NET, AddOpenTelemetry with ASP.NET Core instrumentation does the same.&quot;</p>
+</blockquote>
+<p><strong>Custom spans for business logic:</strong></p>
+<pre><code class="language-python">from opentelemetry import trace
+
+tracer = trace.get_tracer(&quot;order-service&quot;)
+
+def process_order(order):
+    with tracer.start_as_current_span(&quot;process-order&quot;) as span:
+        span.set_attribute(&quot;order.id&quot;, order.id)
+        span.set_attribute(&quot;order.total&quot;, order.total)
+
+        with tracer.start_as_current_span(&quot;validate-order&quot;):
+            validate(order)
+
+        with tracer.start_as_current_span(&quot;reserve-inventory&quot;):
+            reserve(order.items)
+
+        with tracer.start_as_current_span(&quot;charge-payment&quot;):
+            charge(order.payment_method, order.total)
+</code></pre>
+<blockquote>
+<p>&quot;Auto-instrumentation gives you the infrastructure view — HTTP calls, database queries, cache hits. Custom spans give you the BUSINESS view — order processing, inventory reservation, payment charging.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 5: Production Tips (7:30 - 8:30)</h3>
+<p><strong>Sampling:</strong></p>
+<blockquote>
+<p>&quot;Don't trace 100% of requests in production. Use tail-based sampling: capture all traces, but only STORE the interesting ones — errors, slow requests, and a random sample of normal traffic.&quot;</p>
+</blockquote>
+<p><strong>Span attributes:</strong></p>
+<blockquote>
+<p>&quot;Add business context to spans: order ID, customer tier, product category. When debugging, you don't just want to know WHICH service was slow — you want to know which ORDER, which CUSTOMER, which PRODUCT caused the issue.&quot;</p>
+</blockquote>
+<p><strong>Connecting traces to logs:</strong></p>
+<blockquote>
+<p>&quot;Include the trace ID in your log messages. When you find a problematic trace, you can search your logs for that trace ID and get the full picture — structured logs PLUS the visual trace timeline.&quot;</p>
+</blockquote>
+<pre><code class="language-json">{
+  &quot;timestamp&quot;: &quot;2026-03-10T14:22:01Z&quot;,
+  &quot;level&quot;: &quot;ERROR&quot;,
+  &quot;message&quot;: &quot;Payment failed: card declined&quot;,
+  &quot;trace_id&quot;: &quot;abc123def456&quot;,
+  &quot;span_id&quot;: &quot;span789&quot;,
+  &quot;order_id&quot;: &quot;ORD-4521&quot;,
+  &quot;service&quot;: &quot;payment-service&quot;
+}
+</code></pre>
+<hr>
+<h3>OUTRO (8:30 - 9:00)</h3>
+<blockquote>
+<p>&quot;Distributed tracing turns a 'something is slow' mystery into a 'the Stripe API had a latency spike at 2:14 PM and our retry logic added 2.8 seconds to order processing' answer. Start with auto-instrumentation, add custom spans for your business logic, and connect your traces to your logs. Subscribe for the next video where we build a complete observability stack from scratch.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> Two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Jaeger waterfall view, Grafana Tempo trace search, code editor with span instrumentation</li>
+<li><strong>Live demo:</strong> Use a pre-built demo environment with intentional latency injected into one service</li>
+<li><strong>Graphics:</strong> Trace waterfall animations, context propagation flow, W3C header breakdown</li>
+<li><strong>Music:</strong> Investigative, detective-style — we're following clues</li>
+<li><strong>SEO Tags:</strong> distributed tracing, OpenTelemetry, Jaeger, observability, microservices debugging, trace context, span, tracing tutorial</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>

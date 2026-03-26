@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Explained: Retrieval-Augmented Generation in 10 Minutes — TechAI Explained</title>
+  <meta name="description" content="A video script breaking down how RAG works — vector embeddings, chunking strategies, retrieval pipelines, and building a RAG system that actually gives accurate answers.">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Google AdSense — uncomment and add your publisher ID when approved -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8350556723025693" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav>
+      <a href="/" class="logo">⚡ TechAI Explained</a>
+      <div class="nav-links">
+        <a href="/articles/">Tutorials</a>
+        <a href="/courses/kubernetes-for-app-devs/">Courses</a>
+        <a href="/video-scripts/">Video Scripts</a>
+        <a href="/resources/">Resources</a>
+        <a href="/about/">About</a>
+        <a href="https://github.com/techai-explained/techai-explained">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Google AdSense Header Banner -->
+  <div class="ad-slot ad-header" style="text-align:center;padding:10px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+    <!-- TODO: Replace with AdSense ad unit code after approval -->
+    <div style="width:728px;max-width:100%;height:90px;margin:0 auto;background:#eee;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+      📢 Header Ad — Replace with AdSense code
+    </div>
+  </div>
+  <div class="content-with-sidebar" style="display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:0 16px;">
+    <main style="flex:1;min-width:0;">
+      <article class="article-content">
+  <header class="article-header">
+    <div class="article-meta">
+      <span class="tag">Video Script</span>
+      <time>March 11, 2026</time>
+      <span class="read-time">8 min read</span>
+    </div>
+    <h1>RAG Explained: Retrieval-Augmented Generation in 10 Minutes</h1>
+    <p class="subtitle">A video script breaking down how RAG works — vector embeddings, chunking strategies, retrieval pipelines, and building a RAG system that actually gives accurate answers.</p>
+  </header>
+  <div class="article-body">
+    <h2>Video Metadata</h2>
+<ul>
+<li><strong>Target Duration:</strong> 10 minutes</li>
+<li><strong>Format:</strong> Animated diagrams + code walkthrough + live demo</li>
+<li><strong>Audience:</strong> Developers building LLM-powered applications who need their AI to use private data</li>
+<li><strong>Thumbnail Concept:</strong> Brain icon with arrows pointing to document icons and a database — text &quot;RAG: How AI Reads YOUR Data&quot;</li>
+</ul>
+<hr>
+<h2>Script Outline</h2>
+<h3>INTRO (0:00 - 1:00)</h3>
+<p><strong>Hook (0:00 - 0:25)</strong></p>
+<blockquote>
+<p>&quot;You ask ChatGPT about your company's internal docs and it makes things up. You ask it about last quarter's revenue and it hallucinates a number. RAG — Retrieval-Augmented Generation — is how you fix this. It lets AI answer questions using YOUR data, accurately. In 10 minutes, you'll understand exactly how it works and how to build one.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> Side-by-side — left: LLM without RAG giving a wrong answer; right: LLM with RAG giving correct answer with source citations.</p>
+<p><strong>Agenda (0:25 - 1:00)</strong></p>
+<blockquote>
+<p>&quot;We'll cover: what RAG actually is in one sentence. How vector embeddings turn documents into searchable math. The retrieval pipeline step by step. Chunking strategies that make or break accuracy. And a working code example you can run today.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 1: What Is RAG? (1:00 - 2:00)</h3>
+<p><strong>One-sentence definition:</strong></p>
+<blockquote>
+<p>&quot;RAG is a pattern where you RETRIEVE relevant documents from your data, then AUGMENT the LLM's prompt with those documents, so it can GENERATE an answer grounded in real information.&quot;</p>
+</blockquote>
+<p><strong>Visual — the three steps:</strong></p>
+<pre><code>1. RETRIEVE                2. AUGMENT               3. GENERATE
+─────────                  ───────                   ────────
+
+User asks:                 System prompt +           LLM generates
+&quot;What's our               retrieved docs +           answer using
+ refund policy?&quot;          user question               the context
+
+      │                         │                         │
+      ▼                         ▼                         ▼
+┌──────────┐            ┌──────────────┐         ┌──────────────┐
+│ Search   │            │ &quot;Context:    │         │ &quot;Our refund  │
+│ vector   │────────►   │  [doc1]      │────►    │  policy      │
+│ database │            │  [doc2]      │         │  allows      │
+│ for top  │            │              │         │  returns     │
+│ matches  │            │ Question:    │         │  within 30   │
+└──────────┘            │  What's our  │         │  days...&quot;    │
+                        │  refund...?&quot; │         └──────────────┘
+                        └──────────────┘
+</code></pre>
+<p><strong>Why not just fine-tune?</strong></p>
+<blockquote>
+<p>&quot;Fine-tuning bakes knowledge INTO the model. RAG FETCHES knowledge at query time. Fine-tuning is expensive, slow to update, and can't cite sources. RAG is cheap, instantly updatable, and always tells you WHERE the answer came from.&quot;</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Fine-Tuning</th>
+<th>RAG</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Update data</td>
+<td>Retrain model (hours/days)</td>
+<td>Update database (seconds)</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>High (GPU training)</td>
+<td>Low (embedding + search)</td>
+</tr>
+<tr>
+<td>Citations</td>
+<td>Cannot cite sources</td>
+<td>Can cite exact documents</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>Can hallucinate trained data</td>
+<td>Grounded in retrieved docs</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3>SECTION 2: Vector Embeddings — The Magic (2:00 - 3:30)</h3>
+<p><strong>Concept (2:00 - 2:45):</strong></p>
+<blockquote>
+<p>&quot;An embedding model converts text into a list of numbers — a vector — that captures the MEANING of the text. Similar meanings produce similar vectors. 'How to return a product' and 'refund policy for items' have very different words but very similar vectors.&quot;</p>
+</blockquote>
+<p><strong>Visual:</strong> 3D space showing document vectors clustered by topic. Query vector landing near the relevant cluster.</p>
+<pre><code>Vector space (simplified to 2D):
+
+    ▲
+    │    • &quot;refund policy&quot;
+    │    • &quot;return items&quot;         • &quot;shipping rates&quot;
+    │    • &quot;money back&quot;           • &quot;delivery times&quot;
+    │  ★ QUERY                    • &quot;tracking order&quot;
+    │  &quot;how to get a refund&quot;
+    │
+    │         • &quot;product specs&quot;
+    │         • &quot;item dimensions&quot;
+    └──────────────────────────────────────►
+
+★ = query vector (closest to refund cluster)
+</code></pre>
+<p><strong>How embedding works (2:45 - 3:30):</strong></p>
+<blockquote>
+<p>&quot;You send your text to an embedding model — like OpenAI's text-embedding-3-small or an open-source model like BGE — and get back a vector of 256 to 3072 numbers. You store these vectors in a vector database. When a user asks a question, you embed the question, find the closest vectors, and retrieve those documents.&quot;</p>
+</blockquote>
+<p><strong>Code snippet:</strong></p>
+<pre><code class="language-python"># Embedding a document
+response = openai.embeddings.create(
+    input=&quot;Our refund policy allows returns within 30 days&quot;,
+    model=&quot;text-embedding-3-small&quot;
+)
+vector = response.data[0].embedding  # [0.023, -0.041, 0.078, ...]
+# 1536 dimensions of meaning
+</code></pre>
+<hr>
+<h3>SECTION 3: The RAG Pipeline Step by Step (3:30 - 5:30)</h3>
+<p><strong>Visual — full pipeline animated:</strong></p>
+<pre><code>INDEXING (one-time)                    QUERYING (per question)
+───────────────────                    ─────────────────────
+
+Documents ──► Chunking ──► Embedding   User question
+                              │            │
+                              ▼            ▼
+                        ┌──────────┐  Embed question
+                        │ Vector   │       │
+                        │ Database │◄──────┘
+                        └────┬─────┘  Similarity search
+                             │
+                             ▼
+                        Top K chunks
+                             │
+                             ▼
+                     ┌──────────────┐
+                     │ LLM Prompt:  │
+                     │ Context +    │
+                     │ Question     │──► Answer with citations
+                     └──────────────┘
+</code></pre>
+<p><strong>Step-by-step walkthrough (3:30 - 5:00):</strong></p>
+<blockquote>
+<p>&quot;Step 1: CHUNK your documents. A 50-page PDF needs to be split into smaller pieces. Step 2: EMBED each chunk into a vector. Step 3: STORE vectors in a vector database like Pinecone, Weaviate, or pgvector. That's the indexing phase — you do this once.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;Step 4: When a user asks a question, EMBED the question. Step 5: SEARCH the vector database for the most similar chunks — typically the top 3-5. Step 6: BUILD the prompt with the retrieved chunks as context. Step 7: Send to the LLM and get a grounded answer.&quot;</p>
+</blockquote>
+<p><strong>Code walkthrough (5:00 - 5:30):</strong></p>
+<pre><code class="language-python"># Complete RAG pipeline in 20 lines
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+
+# Index documents (one-time)
+documents = SimpleDirectoryReader(&quot;./company-docs&quot;).load_data()
+index = VectorStoreIndex.from_documents(documents)
+
+# Query (per question)
+query_engine = index.as_query_engine(similarity_top_k=3)
+response = query_engine.query(&quot;What is our refund policy?&quot;)
+
+print(response.response)    # The answer
+print(response.source_nodes) # The source documents
+</code></pre>
+<hr>
+<h3>SECTION 4: Chunking — Where Most RAG Systems Fail (5:30 - 7:00)</h3>
+<blockquote>
+<p>&quot;Chunking is the most underrated part of RAG. Get it wrong and your system retrieves the wrong context. Get it right and accuracy jumps dramatically.&quot;</p>
+</blockquote>
+<p><strong>Strategy comparison (5:30 - 6:15):</strong></p>
+<pre><code>FIXED SIZE CHUNKING           SEMANTIC CHUNKING
+───────────────────           ─────────────────
+Split every 500 tokens        Split at paragraph/section boundaries
+
+&quot;...end of section A.        &quot;Section A: Refund Policy
+Section B: Shipping...&quot;      Our refund policy allows...&quot;
+     ↑ splits mid-topic           ↑ splits at natural boundary
+
+Problem: loses context        Better: preserves meaning
+
+RECURSIVE CHUNKING            PARENT-CHILD CHUNKING
+───────────────────           ─────────────────────
+Split by paragraph,           Embed small chunks (child)
+then by sentence,             but retrieve the parent
+then by token                 (larger context)
+
+Adapts to document            Best accuracy
+structure                     (search precision + full context)
+</code></pre>
+<p><strong>Key advice (6:15 - 7:00):</strong></p>
+<blockquote>
+<p>&quot;Three rules for chunking: First, keep chunk sizes between 256 and 1024 tokens. Too small and you lose context. Too large and you dilute relevance. Second, add overlap — 10-20% — so information at chunk boundaries isn't lost. Third, preserve document structure. Headers, sections, and paragraphs are natural boundaries.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 5: Production Considerations (7:00 - 8:30)</h3>
+<p><strong>Hybrid search (7:00 - 7:30):</strong></p>
+<blockquote>
+<p>&quot;Vector search alone misses exact matches. If someone searches for 'error code E-4521', vector similarity might not find it. Hybrid search combines vector search with keyword search — the best of both worlds.&quot;</p>
+</blockquote>
+<p><strong>Re-ranking (7:30 - 8:00):</strong></p>
+<blockquote>
+<p>&quot;Retrieve 20 chunks with vector search, then re-rank the top 20 with a cross-encoder model to find the true top 5. This two-stage approach dramatically improves accuracy.&quot;</p>
+</blockquote>
+<pre><code>Stage 1: Vector search → 20 candidates (fast, approximate)
+Stage 2: Cross-encoder rerank → 5 best matches (slow, precise)
+</code></pre>
+<p><strong>Evaluation (8:00 - 8:30):</strong></p>
+<blockquote>
+<p>&quot;You MUST evaluate your RAG system. Create a test set of 50-100 questions with known correct answers. Measure retrieval accuracy (did we find the right chunks?) and generation accuracy (did the LLM produce the right answer?). Without eval, you're guessing.&quot;</p>
+</blockquote>
+<hr>
+<h3>SECTION 6: Live Demo (8:30 - 9:30)</h3>
+<blockquote>
+<p>&quot;Let me show you a working RAG system in 60 seconds.&quot;</p>
+</blockquote>
+<p><strong>Demo:</strong> Screen recording showing:</p>
+<ol>
+<li>Loading 10 PDF documents</li>
+<li>Creating the vector index (show progress bar)</li>
+<li>Asking three questions and getting accurate, cited answers</li>
+<li>Showing the source documents for each answer</li>
+</ol>
+<hr>
+<h3>OUTRO (9:30 - 10:00)</h3>
+<blockquote>
+<p>&quot;That's RAG — the pattern that makes AI actually useful with your own data. Retrieval, augmentation, generation. The hard parts are chunking and evaluation. Get those right and you have a system that answers questions accurately with citations. Subscribe for more AI engineering deep dives.&quot;</p>
+</blockquote>
+<p><strong>End Screen:</strong> Two suggested videos.</p>
+<hr>
+<h2>Production Notes</h2>
+<ul>
+<li><strong>B-Roll:</strong> Vector space visualizations, document being chunked animation, code IDE</li>
+<li><strong>Graphics:</strong> Pipeline diagrams, comparison tables, 3D vector space visualization</li>
+<li><strong>Demo:</strong> Use a pre-built Jupyter notebook for the live demo — keep it snappy</li>
+<li><strong>Music:</strong> Curious, exploratory tone — this is educational content</li>
+<li><strong>SEO Tags:</strong> RAG, retrieval augmented generation, vector embeddings, LLM, AI engineering, vector database, LlamaIndex, LangChain, embeddings, chunking</li>
+</ul>
+<p><em>Script by the TechAI Explained Team.</em></p>
+
+  </div>
+  <div class="support-cta" style="margin:2rem 0;padding:1.5rem 2rem;background:linear-gradient(135deg,#0d1117,#1a1a2e);border:2px solid #58a6ff;border-radius:12px;text-align:center;">
+    <h3 style="color:#58a6ff;margin:0 0 0.5rem;">💝 Support TechAI Explained</h3>
+    <p style="color:#c9d1d9;margin:0 0 1rem;">Free tutorials, open source, community-driven. Help us keep creating.</p>
+    <p style="margin:0;">
+      <a href="/sponsor/" style="display:inline-block;padding:10px 24px;background:#238636;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin:0 8px;">
+        ☕ Become a Sponsor
+      </a>
+      <a href="#" style="display:inline-block;padding:10px 24px;background:#21262d;color:#c9d1d9;text-decoration:none;border-radius:8px;font-weight:bold;border:1px solid #30363d;margin:0 8px;">
+        💝 GitHub Sponsors
+      </a>
+    </p>
+  </div>
+  <footer class="article-footer">
+    <p>Written by the <strong>TechAI Explained Team</strong>. Found this helpful? Share it with your team.</p>
+  </footer>
+</article>
+
+      <!-- In-Article Ad (after content) -->
+      <div class="ad-slot ad-in-article" style="text-align:center;padding:20px 0;margin:30px 0;">
+        <!-- TODO: Replace with AdSense in-article ad unit -->
+        <div style="width:100%;max-width:336px;height:280px;margin:0 auto;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 In-Article Ad — Replace with AdSense code
+        </div>
+      </div>
+    </main>
+    <aside class="ad-sidebar" style="width:300px;flex-shrink:0;">
+      <!-- Sidebar Ad -->
+      <div class="ad-slot ad-sidebar-sticky" style="position:sticky;top:20px;text-align:center;">
+        <!-- TODO: Replace with AdSense sidebar ad unit -->
+        <div style="width:300px;height:250px;background:#f5f5f5;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;font-family:system-ui;">
+          📢 Sidebar Ad — Replace with AdSense code
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <p>&copy; TechAI Explained Team — Complex tech, simple explanations.</p>
+  </footer>
+</body>
+</html>
