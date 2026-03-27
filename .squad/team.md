@@ -16,10 +16,11 @@
 
 | Name | Role | Joined |
 |------|------|--------|
-| **Tamir Dresher** | Channel Owner / Director | 2026-07-13 |
+| **TD** | Channel Owner / Director | 2026-07-13 |
 
 ## Communication
 
 - **Async-first:** GitHub Issues
 - **Labels:** `squad`, `video:{topic}`, `pipeline:{stage}`
 - **Decisions:** `.squad/decisions.md`
+
