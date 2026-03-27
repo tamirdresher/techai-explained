@@ -7,32 +7,60 @@ jobs:
   create-products:
     runs-on: ubuntu-latest
     steps:
+      - name: Verify Gumroad token and list existing products
+        env:
+          GUMROAD_TOKEN: ${{ secrets.GUMROAD_ACCESS_TOKEN }}
+        run: |
+          echo "=== Testing Gumroad API token ==="
+          echo "Token length: ${#GUMROAD_TOKEN}"
+          
+          # First verify token by listing existing products
+          HTTP_STATUS=$(curl -s -o /tmp/gumroad_list.json -w "%{http_code}" \
+            "https://api.gumroad.com/v2/products?access_token=$GUMROAD_TOKEN")
+          echo "List products HTTP status: $HTTP_STATUS"
+          cat /tmp/gumroad_list.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('Products found:', len(d.get('products',[])), '| success:', d.get('success'))" 2>/dev/null || echo "Parse error - raw response:"
+          cat /tmp/gumroad_list.json | head -200
+
       - name: Create AI-Powered Dev course on Gumroad
         env:
           GUMROAD_TOKEN: ${{ secrets.GUMROAD_ACCESS_TOKEN }}
         run: |
-          RESPONSE=$(curl -s -X POST "https://api.gumroad.com/v2/products" \
-            -d "access_token=$GUMROAD_TOKEN" \
-            -d "name=AI-Powered Development: From Copilot to Full Agent Teams" \
-            -d "price=1999" \
-            -d "url=ai-powered-dev-course" \
-            -d "published=false")
-          echo "Response: $RESPONSE"
-          PRODUCT_ID=$(echo $RESPONSE | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('product',{}).get('id','FAILED') if d.get('success') else 'ERROR:'+d.get('message','unknown'))")
-          echo "Product ID: $PRODUCT_ID"
-          if [[ "$PRODUCT_ID" != "FAILED" && "$PRODUCT_ID" != ERROR* ]]; then
-            echo "SUCCESS: Product created with ID $PRODUCT_ID"
-            # Add EARLYBIRD offer code
-            curl -s -X POST "https://api.gumroad.com/v2/products/$PRODUCT_ID/offer_codes" \
-              -d "access_token=$GUMROAD_TOKEN" \
-              -d "offer_code=EARLYBIRD" \
-              -d "amount_off=1000" \
-              -d "max_purchase_count=100"
-            echo ""
-            echo "EARLYBIRD offer created"
-            # Also copy token to content-empire (output it masked for use as secret)
-            echo "::notice::Gumroad product created! ID: $PRODUCT_ID"
-            echo "GUMROAD_PRODUCT_ID=$PRODUCT_ID" >> $GITHUB_ENV
+          # Check if product already exists first
+          EXISTING=$(cat /tmp/gumroad_list.json | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+products = d.get('products',[])
+for p in products:
+    if 'AI-Powered' in p.get('name','') or 'ai-powered' in p.get('short_url',''):
+        print(p['id'])
+        break
+" 2>/dev/null)
+          
+          if [ -n "$EXISTING" ]; then
+            echo "Product already exists: $EXISTING"
+            echo "GUMROAD_PRODUCT_ID=$EXISTING" >> $GITHUB_ENV
+          else
+            echo "Creating new product..."
+            HTTP_STATUS=$(curl -s -o /tmp/gumroad_create.json -w "%{http_code}" \
+              -X POST "https://api.gumroad.com/v2/products" \
+              --data-urlencode "access_token=$GUMROAD_TOKEN" \
+              --data-urlencode "name=AI-Powered Development: From Copilot to Full Agent Teams" \
+              -d "price=1999" \
+              -d "published=false")
+            echo "Create HTTP status: $HTTP_STATUS"
+            cat /tmp/gumroad_create.json
+            PRODUCT_ID=$(cat /tmp/gumroad_create.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('product',{}).get('id','')) if d.get('success') else print('')" 2>/dev/null)
+            if [ -n "$PRODUCT_ID" ]; then
+              echo "SUCCESS: Product created with ID $PRODUCT_ID"
+              # Add EARLYBIRD offer code
+              curl -s -X POST "https://api.gumroad.com/v2/products/$PRODUCT_ID/offer_codes" \
+                --data-urlencode "access_token=$GUMROAD_TOKEN" \
+                -d "offer_code=EARLYBIRD" \
+                -d "amount_off=1000" \
+                -d "max_purchase_count=100"
+              echo "EARLYBIRD offer created"
+              echo "GUMROAD_PRODUCT_ID=$PRODUCT_ID" >> $GITHUB_ENV
+            fi
           fi
 
       - name: Update content-empire secret GUMROAD_AI_COURSE_ID
