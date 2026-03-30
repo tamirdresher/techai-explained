@@ -62,9 +62,12 @@ while ($true) {
             $wrapperScript = Join-Path $env:TEMP "ralph-round-techai-$round.ps1"
             @"
 `$promptFile = '$($promptFile.Replace("'","''"))'
-`$p = [System.IO.File]::ReadAllText(`$promptFile)
+`$env:AGENCY_SESSION_ID = ''
+$env:cli_resume = ''
+$env:MSFT_AGENCY = ''
+$p = [System.IO.File]::ReadAllText(`$promptFile)
 `$singleLine = `$p -replace "`r`n", " " -replace "`n", " "
-agency copilot --yolo --autopilot --agent squad -p `$singleLine --resume=$roundSessionId
+agency copilot --yolo --autopilot -p `$singleLine --resume=$roundSessionId
 exit `$LASTEXITCODE
 "@ | Out-File -FilePath $wrapperScript -Encoding utf8 -Force
 
