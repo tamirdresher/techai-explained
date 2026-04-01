@@ -1,41 +1,570 @@
 ---
-layout: base.njk
-title: Home
-description: Complex tech. Simple explanations. Tutorials on AI, DevOps, and modern software engineering.
+permalink: /index.html
+eleventyExcludeFromCollections: true
 ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechAI Explained — AI & Technology Education, Simplified</title>
+  <meta name="description" content="AI & Technology Education — Simplified. Tutorials, videos, and tools on AI agents, developer workflows, and modern software engineering.">
+  <meta property="og:title" content="TechAI Explained">
+  <meta property="og:description" content="AI & Technology Education — Simplified">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://techai-explained.github.io/techai-explained/">
+  <meta property="og:image" content="https://techai-explained.github.io/techai-explained/img/og-placeholder.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-<div class="hero">
-  <h1>TechAI Explained</h1>
-  <p>Complex tech. Simple explanations. Deep-dive tutorials on AI agents, Kubernetes, reactive programming, and modern developer tools.</p>
-  <p style="color: var(--text-muted); font-size: 1rem; margin-top: 0.5rem;">📊 15 tutorials · 9 video scripts · 1 complete course (5 lessons) · 35+ pages</p>
-</div>
+    :root {
+      --bg: #0a0a1a;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #222244;
+      --cyan: #00d4ff;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2a2a4a;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
 
-<div class="section-header">
-  <h2>📚 Latest Tutorials</h2>
-</div>
+    html { scroll-behavior: smooth; }
 
-<div class="card-grid">
-  {%- for article in collections.articles -%}
-  <div class="card">
-    <span class="tag">{{ article.data.tags[0] if article.data.tags else 'Tutorial' }}</span>
-    <h3><a href="{{ article.url | url }}">{{ article.data.title }}</a></h3>
-    <p>{{ article.data.description }}</p>
-    <div class="meta">{{ article.data.date | readableDate }} · {{ article.data.readTime or '8 min read' }}</div>
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10,10,26,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--cyan);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--purple); }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--cyan); }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%);
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      animation: pulse-glow 4s ease-in-out infinite;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%);
+      bottom: 20%;
+      right: 10%;
+      pointer-events: none;
+      animation: pulse-glow 5s ease-in-out infinite reverse;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 1.5rem;
+      animation: fade-in-up 0.6s ease-out;
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 1.5rem;
+      animation: fade-in-up 0.6s ease-out 0.1s both;
+    }
+    .hero h1 .accent-cyan { color: var(--cyan); }
+    .hero h1 .accent-purple { color: var(--purple); }
+    .hero-tagline {
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+      animation: fade-in-up 0.6s ease-out 0.2s both;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fade-in-up 0.6s ease-out 0.3s both;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+      font-family: var(--font);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,212,255,0.3);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    @keyframes fade-in-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Sections ── */
+    section {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0 auto;
+    }
+
+    /* ── Article Cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      border-color: var(--cyan);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,212,255,0.08);
+      background: var(--bg-card-hover);
+    }
+    .card-tag {
+      display: inline-block;
+      width: fit-content;
+      padding: 0.25rem 0.75rem;
+      background: rgba(139,92,246,0.15);
+      color: var(--purple);
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      line-height: 1.3;
+    }
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      flex: 1;
+      margin-bottom: 1.25rem;
+    }
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--cyan);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: gap 0.2s;
+    }
+    .card:hover .card-link { gap: 0.7rem; }
+
+    /* ── YouTube Section ── */
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .video-wrapper iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* ── Feature Cards (Games & Products) ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    .feature-card:hover {
+      border-color: var(--purple);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(139,92,246,0.1);
+    }
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: 1.25rem;
+      display: block;
+    }
+    .feature-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .social-link:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      transform: translateY(-2px);
+    }
+    .footer-copy {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .footer-copy .glow { color: var(--cyan); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      section { padding: 3rem 1.25rem; }
+      .card-grid { grid-template-columns: 1fr; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .hero { padding: 5rem 1.25rem 3rem; min-height: auto; }
+      .hero-cta { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 300px; justify-content: center; }
+    }
+
+    /* ── Scroll animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">⚡ Tech<span>AI</span> Explained</a>
+      <div class="nav-links">
+        <a href="#articles">Articles</a>
+        <a href="#youtube">YouTube</a>
+        <a href="#games">Games</a>
+        <a href="#products">Products</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🚀 AI & Technology Education</div>
+      <h1>
+        <span class="accent-cyan">Tech</span><span class="accent-purple">AI</span>
+        Explained
+      </h1>
+      <p class="hero-tagline">AI & Technology Education — Simplified.<br>Deep dives into AI agents, developer workflows, and modern software engineering.</p>
+      <div class="hero-cta">
+        <a href="#articles" class="btn btn-primary">📚 Read Articles</a>
+        <a href="https://www.youtube.com/channel/UCizqKpAji11NLg-JtDbbP9g" target="_blank" rel="noopener" class="btn btn-outline">▶ YouTube Channel</a>
+      </div>
+    </div>
   </div>
-  {%- endfor -%}
-</div>
 
-<div class="section-header">
-  <h2>🎥 Video Script Outlines</h2>
-</div>
+  <div class="divider"></div>
 
-<div class="card-grid">
-  {%- for script in collections.videoScripts -%}
-  <div class="card">
-    <span class="tag">Video Script</span>
-    <h3><a href="{{ script.url | url }}">{{ script.data.title }}</a></h3>
-    <p>{{ script.data.description }}</p>
-    <div class="meta">{{ script.data.date | readableDate }}</div>
-  </div>
-  {%- endfor -%}
-</div>
+  <!-- Latest Articles -->
+  <section id="articles">
+    <div class="reveal">
+      <div class="section-label">📰 Latest</div>
+      <h2 class="section-title">Featured Articles</h2>
+      <p class="section-desc">In-depth tutorials and guides on AI agents, automation, and developer productivity.</p>
+    </div>
+    <div class="card-grid">
+      <a href="https://dev.to/techaiexplained/building-ai-agent-teams-that-actually-ship-code-dj5" target="_blank" rel="noopener" class="card reveal">
+        <div class="card-tag">AI Agents</div>
+        <h3>Building AI Agent Teams That Ship Code</h3>
+        <p>Learn how to orchestrate multiple AI agents into a productive coding team that delivers real, working software.</p>
+        <span class="card-link">Read on Dev.to →</span>
+      </a>
+      <a href="https://dev.to/techaiexplained/mcp-servers-the-plugin-system-ai-agents-were-missing-14a2" target="_blank" rel="noopener" class="card reveal">
+        <div class="card-tag">MCP</div>
+        <h3>MCP Servers: Plugin System AI Agents Were Missing</h3>
+        <p>Discover how the Model Context Protocol gives AI agents the extensibility they need to connect to any tool or service.</p>
+        <span class="card-link">Read on Dev.to →</span>
+      </a>
+      <a href="https://dev.to/techaiexplained/the-hidden-cost-of-not-automating-your-dev-workflow-4f43" target="_blank" rel="noopener" class="card reveal">
+        <div class="card-tag">Automation</div>
+        <h3>Hidden Cost of Not Automating Dev Workflow</h3>
+        <p>The real price of manual processes — and how automation transforms developer productivity and team velocity.</p>
+        <span class="card-link">Read on Dev.to →</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- YouTube -->
+  <section id="youtube">
+    <div class="reveal">
+      <div class="section-label">🎬 Video</div>
+      <h2 class="section-title">Watch & Learn</h2>
+      <p class="section-desc">Visual deep-dives into AI architecture, coding patterns, and tech concepts.</p>
+    </div>
+    <div class="video-wrapper reveal">
+      <iframe
+        src="https://www.youtube.com/embed/BIhf0Ji3iy4"
+        title="AI Agents Architecture — TechAI Explained"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Games & Products -->
+  <section id="games">
+    <div class="reveal">
+      <div class="section-label">🧩 Explore</div>
+      <h2 class="section-title">Games & Products</h2>
+      <p class="section-desc">Beyond tutorials — play indie games and grab premium resources.</p>
+    </div>
+    <div class="feature-grid">
+      <a href="https://jellybolt.itch.io" target="_blank" rel="noopener" class="feature-card reveal">
+        <span class="feature-icon">🎮</span>
+        <h3>JellyBolt Games</h3>
+        <p>18 indie games and counting! Puzzle, action, and creative experiences built with passion.</p>
+        <span class="btn btn-outline">Play on itch.io →</span>
+      </a>
+      <a href="https://tdsquad.gumroad.com" id="products" target="_blank" rel="noopener" class="feature-card reveal">
+        <span class="feature-icon">📦</span>
+        <h3>Digital Products</h3>
+        <p>Premium templates, guides, and tools to level up your development workflow.</p>
+        <span class="btn btn-outline">Browse on Gumroad →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="social-links reveal">
+        <a href="https://www.youtube.com/channel/UCizqKpAji11NLg-JtDbbP9g" target="_blank" rel="noopener" class="social-link">▶ YouTube</a>
+        <a href="https://dev.to/techaiexplained" target="_blank" rel="noopener" class="social-link">📝 Dev.to</a>
+        <a href="https://hashnode.com/@techaiexplained" target="_blank" rel="noopener" class="social-link">#️⃣ Hashnode</a>
+        <a href="https://bsky.app/profile/techaiexplained.bsky.social" target="_blank" rel="noopener" class="social-link">🦋 Bluesky</a>
+        <a href="https://github.com/techai-explained" target="_blank" rel="noopener" class="social-link">🐙 GitHub</a>
+      </div>
+      <p class="footer-copy">© 2025 <span class="glow">TechAI Explained</span> — AI & Technology Education, Simplified.</p>
+    </div>
+  </footer>
+
+  <!-- Minimal JS: scroll-reveal only -->
+  <script>
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
