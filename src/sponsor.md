@@ -79,7 +79,7 @@ For companies that want to support developer education and get visibility.
 ### GitHub Sponsors (Preferred)
 The easiest way to support us with monthly contributions:
 
-👉 [**Sponsor on GitHub**](#)
+👉 [**Sponsor on GitHub**](https://github.com/sponsors/tdsquadAI)
 
 ### One-Time Contributions
 Want to make a one-time donation instead?
