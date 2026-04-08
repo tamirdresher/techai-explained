@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "watch": {
+    "interval": 15,
+    "execute": true,
+    "timeout": 30,
+    "verbose": false,
+    "self-pull": true,
+    "decision-hygiene": false,
+    "cleanup": true
+  }
+}
